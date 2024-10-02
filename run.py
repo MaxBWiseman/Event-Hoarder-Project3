@@ -21,8 +21,17 @@ soup2 = BeautifulSoup(page2.content, 'html.parser')
 events = soup.find_all('a', class_='event-card-link')
 events2 = soup2.find_all('a', class_='event-card-link')
 
-print(events)
-
 event_data = []
 
+for event in events + events2:
+    event_info = {
+        'name': event['aria-label'],
+        'location': event['data-event-location'],
+        'url': event['href']
+    }
+    event_data.append(event_info)
+    
+for data in event_data:
+    if data == data:
+        
 
