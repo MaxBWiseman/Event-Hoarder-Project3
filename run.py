@@ -33,7 +33,8 @@ event_data = []
 for event in events + events2:
 # Combines the two lists of events
     event_info = {
-        'name': event['aria-label'],
+        'name': event['aria-label'].replace('View', '').strip(),
+# Without this the word "View" will be included in the name of the event
         'location': event['data-event-location'],
         'url': event['href']
     }
@@ -52,10 +53,19 @@ for data in event_data:
         seen_urls.add(data['url'])
 # If the iterated URL is not in seen_urls which is a unique set, it is appended to unique_events and added to seen_urls.
 # seen_urls acts as a filter to remove duplicates
-        
-for data in unique_events:
-    data['name'] = data['name'].replace('View', '').strip()
-# Without this the word "View" will be included in the name of the event
 
-    print(f'{data["name"]},\n{data["location"]}\n---------------------------------')
+for data in unique_events:
+    event_url = data['url']
+    page_detail = requests.get(event_url)
+    page_detail_soup = BeautifulSoup(page_detail.content, 'html.parser')
+    
+    price_div = page_detail_soup.find('div', class_="conversion-bar__panel-info")
+    event_price = price_div.get_text(strip=True) if price_div else 'Free'
+# The price of the event is scraped from the searched events, if it is not found it is set to 'Free'
+
+    summary = page_detail_soup.find('p', class_='summary')
+    event_summary = summary.get_text(strip=True) if summary else 'No summary available'
+# The summary of the event is scraped from the searched events, if it is not found it is set to 'No summary available'
+    
+    print(f'{data["name"]},\n{data["location"]}\nSummary: {event_summary}\nPrice: {event_price}\n---------------------------------')
 
