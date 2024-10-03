@@ -7,6 +7,7 @@ import itertools
 import threading
 import sys
 import time
+import hashlib
 
 class Spinner:
     def __init__(self, message='Loading...'):
@@ -40,16 +41,17 @@ def save_to_sheet(sheet, search_key, events):
     if len(sheet.get_all_values()) >= 1000:
         sheet.clear()
     
-    # Delete existing rows with the same search key
-    cell = sheet.find(search_key)
-    while cell:
-        sheet.delete_rows(cell.row)
-        cell = sheet.find(search_key)
-
     timestamp = datetime.now().isoformat()
     data = []
     for event in events:
-        unique_id = f'{search_key}_{event["url"].split("/")[-1]}'
+        unique_id = f'{search_key}_{hashlib.md5(event["url"].encode()).hexdigest()}'
+        
+        # Delete existing rows with the same unique ID
+        cell = sheet.find(unique_id)
+        while cell:
+            sheet.delete_rows(cell.row)
+            cell = sheet.find(unique_id)
+        
         data.append([
             search_key, unique_id, timestamp,
             event.get('name', 'N/A'),
@@ -192,7 +194,9 @@ while True:
         user_input = input("Press 'Y' to see more events, 'S' to start a new search, or any other key to exit: ").strip().lower()
         if user_input == 's':
             break
-        elif user_input != 'y':
+        elif user_input == 'y':
+            current_page += 1
+        else:
             print("Exiting the program.")
             sys.exit()
 
