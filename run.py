@@ -14,20 +14,29 @@ class Spinner:
         self.message = message
         self.spinner = itertools.cycle(['|', '/', '-', '\\'])
         self.stop_running = threading.Event()
+# This sets up the message and spinner, and creates a stop_running event that will be used to stop the spinner.
         
     def start(self):
         threading.Thread(target=self._spin).start()
+# This starts a new thread that will run the _spin method.
     
     def _spin(self):
         while not self.stop_running.is_set():
+# This method will run as long as the stop_running event is not set.
             sys.stdout.write(f'\r{self.message} {next(self.spinner)}')
+# \r is a carriage return, which moves the cursor to the beginning of the line.
+# This allows the spinner to overwrite itself on the same line, next(self.spinner) gets the next character in the spinner.
             sys.stdout.flush()
+# Immediately flushes to the console to show the spinner.
             time.sleep(0.1)
             sys.stdout.write('\b')
+# \b is a backspace, which moves the cursor back one character so a new character can be written.
     
     def stop(self):
         self.stop_running.set()
+# Thread is stopped
         sys.stdout.write('\r' + ' ' * (len(self.message) + 2) + '\r')
+# Clean up the spinner by overwriting it with spaces and moving the cursor back to the beginning of the line.
         sys.stdout.flush()
 
 gc = gspread.service_account(filename="creds.json")
@@ -42,16 +51,18 @@ def save_to_sheet(sheet, search_key, events):
         sheet.clear()
     
     timestamp = datetime.now().isoformat()
+# isoformat() method returns a string representing a date and time in ISO 8601 format example: '2021-09-01T12:00:00'
     data = []
     for event in events:
         unique_id = f'{search_key}_{hashlib.md5(event["url"].encode()).hexdigest()}'
+# This gives the unique ID for each event by hashing the URL of the event
         
-        # Delete existing rows with the same unique ID
         cell = sheet.find(unique_id)
         while cell:
             sheet.delete_rows(cell.row)
             cell = sheet.find(unique_id)
-        
+# Delete existing rows with the same unique ID
+
         data.append([
             search_key, unique_id, timestamp,
             event.get('name', 'N/A'),
@@ -62,6 +73,7 @@ def save_to_sheet(sheet, search_key, events):
             event.get('url', 'N/A')
         ])
     sheet.append_rows(data)
+# This data is then appended to the Google Sheet, if none of the data is available, 'N/A' is used.
 
 def load_from_sheet(sheet, search_key):
     cell = sheet.findall(search_key)
@@ -149,18 +161,45 @@ while True:
             spinner.start()
             url = f'https://www.eventbrite.com/d/united-kingdom--{location}/{product}/?page=1'
             url2 = f'https://www.eventbrite.com/d/united-kingdom--{location}/{product}/?page=2'
+            url3 = f'https://www.ticketmaster.co.uk/search?q={product}'
+            url4 = f'https://www.ticketweb.uk/'
 
             page = requests.get(url)
             page2 = requests.get(url2)
+            page3 = requests.get(url3)
+            page4 = requests.get(url4)
+            
             soup = BeautifulSoup(page.content, 'html.parser')
             soup2 = BeautifulSoup(page2.content, 'html.parser')
+            soup3 = BeautifulSoup(page3.content, 'html.parser')
+            soup4 = BeautifulSoup(page4.content, 'html.parser')
 
             events = soup.find_all('a', class_='event-card-link')
             events2 = soup2.find_all('a', class_='event-card-link')
-
+# events 2 is the second page of events
+            
+            ticket_web_events = soup4.find_all(lambda tag: tag.name == 'li' and tag.find('a'))
+            ticket_web_events_dates = soup4.find('div', class_='card-media responsive-ratios ratio16_9 theme-separator-strokes')
+# This finds all the 'li' tags that have an 'a' tag inside them, using a lambda to scrape spotlight venue data
+# ticket_web_event_dates is used to scrape the dates off the homepage cards.4 c
+            
             event_data = []
             tags_counter = Counter()
-
+            
+            for event in ticket_web_events:
+                spotlight_venues = {
+                    'name': event.find('span', class_='list-group-item-text').get_text(strip=True)
+                    'date': event.find('span', class_='small-l').get_text(strip=True)
+                    'url': event.find('a')['href']
+                }
+                event_data.append(spotlight_venues)
+                
+            for event in ticket_web_events_dates:
+                spotlight_venues_locations = {
+                    'spotlight_provider': event.find('h3', class_="card-title").get_text(strip=True)
+                    'spotlight_location': event.find('title').get_text(strip=True)
+                }
+                
             for event in events + events2:
                 event_info = {
                     'name': event.get('aria-label', '').replace('View', '').strip(),
