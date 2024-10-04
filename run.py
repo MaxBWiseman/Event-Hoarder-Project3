@@ -135,7 +135,109 @@ def display_events(events, start_index, end_index, search_key, tags_counter):
     # Cache the events in the hashtable
     cache[search_key] = collected_events
 
-while True:
+def scrape_eventbrite_events(location, product):
+    url = f'https://www.eventbrite.com/d/united-kingdom--{location}/{product}/?page=1'
+    
+    page = requests.get(url)
+    
+    soup = BeautifulSoup(page.content, 'html.parser')
+    
+    events = soup.find_all('a', class_='event-card-link')
+    
+    event_data = []
+    tags_counter = Counter()
+    seen_urls = set()
+    
+    for event in events:
+        event_url = event['href']
+        if event_url in seen_urls:
+            continue
+        seen_urls.add(event_url)
+        
+        event_info = {
+            'name': event.get('aria-label', '').replace('View', '').strip(),
+            'location': event['data-event-location'],
+            'url': event_url
+        }
+        
+        page_detail = requests.get(event_url)
+        page_detail_soup = BeautifulSoup(page_detail.content, 'html.parser')
+
+        price_div = page_detail_soup.find('div', class_="conversion-bar__panel-info")
+        event_price = price_div.get_text(strip=True) if price_div else 'Free'
+
+        summary = page_detail_soup.find('p', class_='summary')
+        event_summary = summary.get_text(strip=True) if summary else 'No summary available'
+
+        date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
+        event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
+
+        tags = page_detail_soup.find_all('a', class_='tags-link')
+        for tag in tags:
+            tags_counter[tag.get_text(strip=True)] += 1
+
+        event_info.update({
+            'event_date_time': event_date_time,
+            'summary': event_summary,
+            'event_price': event_price
+        })
+
+        event_data.append(event_info)
+    
+    return event_data, tags_counter
+
+def scrape_ticketweb_spotlight_venues(location):
+    url = f'https://www.ticketweb.uk/search?q={location}'
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, 'html.parser')
+    
+    ticket_web_events = soup.find_all(lambda tag: tag.name == 'li' and tag.find('a'))
+    ticket_web_events_dates = soup.find_all('div', class_='card-media responsive-ratios ratio16_9 theme-separator-strokes')
+    
+    event_data = []
+    for event in ticket_web_events:
+        name_span = event.find('span', class_='list-group-item-text')
+        date_span = event.find('span', class_='small-l')
+        url_anchor = event.find('a')
+        
+        spotlight_venues = {
+            'name': name_span.get_text(strip=True) if name_span else 'N/A',
+            'date': date_span.get_text(strip=True) if date_span else 'N/A',
+            'url': url_anchor['href'] if url_anchor else 'N/A',
+        }
+        event_data.append(spotlight_venues)
+    
+    for event in ticket_web_events_dates:
+        provider_h3 = event.find('h3', class_="card-title")
+        location_title = event.find('title')
+        
+        spotlight_venues_locations = {
+            'spotlight_provider': provider_h3.get_text(strip=True) if provider_h3 else 'N/A',
+            'spotlight_location': location_title.get_text(strip=True) if location_title else 'N/A',
+        }
+        event_data.append(spotlight_venues_locations)
+    
+    return event_data
+
+def main():
+    while True:
+        print("Choose an option:")
+        print("1. Search for events")
+        print("2. Search for spotlight venues")
+        print("3. Exit")
+        choice = input("Enter your choice: ").strip()
+
+        if choice == '1':
+            search_events()
+        elif choice == '2':
+            search_spotlight_venues()
+        elif choice == '3':
+            print("Exiting the program.")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+def search_events():
     product = input('Enter event type or name: ').replace(' ', '%20')
     location = input('Enter location: ').replace(' ', '%20')
 
@@ -144,7 +246,7 @@ while True:
     spinner = Spinner("Fetching events...")
     spinner.start()
 
-    unique_events = []  # Ensure unique_events is defined
+    unique_events = []
 
     try:
         # Check if the search term is in the cache
@@ -159,72 +261,48 @@ while True:
             print("Scraping new events.")
             spinner = Spinner("Scraping new events...")
             spinner.start()
-            url = f'https://www.eventbrite.com/d/united-kingdom--{location}/{product}/?page=1'
-            url2 = f'https://www.eventbrite.com/d/united-kingdom--{location}/{product}/?page=2'
-            url3 = f'https://www.ticketmaster.co.uk/search?q={product}'
-            url4 = f'https://www.ticketweb.uk/'
-
-            page = requests.get(url)
-            page2 = requests.get(url2)
-            page3 = requests.get(url3)
-            page4 = requests.get(url4)
-            
-            soup = BeautifulSoup(page.content, 'html.parser')
-            soup2 = BeautifulSoup(page2.content, 'html.parser')
-            soup3 = BeautifulSoup(page3.content, 'html.parser')
-            soup4 = BeautifulSoup(page4.content, 'html.parser')
-
-            events = soup.find_all('a', class_='event-card-link')
-            events2 = soup2.find_all('a', class_='event-card-link')
-# events 2 is the second page of events
-            
-            ticket_web_events = soup4.find_all(lambda tag: tag.name == 'li' and tag.find('a'))
-            ticket_web_events_dates = soup4.find('div', class_='card-media responsive-ratios ratio16_9 theme-separator-strokes')
-# This finds all the 'li' tags that have an 'a' tag inside them, using a lambda to scrape spotlight venue data
-# ticket_web_event_dates is used to scrape the dates off the homepage cards.4 c
-            
-            event_data = []
-            tags_counter = Counter()
-            
-            for event in ticket_web_events:
-                spotlight_venues = {
-                    'name': event.find('span', class_='list-group-item-text').get_text(strip=True)
-                    'date': event.find('span', class_='small-l').get_text(strip=True)
-                    'url': event.find('a')['href']
-                }
-                event_data.append(spotlight_venues)
-                
-            for event in ticket_web_events_dates:
-                spotlight_venues_locations = {
-                    'spotlight_provider': event.find('h3', class_="card-title").get_text(strip=True)
-                    'spotlight_location': event.find('title').get_text(strip=True)
-                }
-                
-            for event in events + events2:
-                event_info = {
-                    'name': event.get('aria-label', '').replace('View', '').strip(),
-                    'location': event['data-event-location'],
-                    'url': event['href']
-                }
-                event_data.append(event_info)
-
-            unique_events = []
-            seen_urls = set()
-
-            for data in event_data:
-                if data['url'] not in seen_urls:
-                    unique_events.append(data)
-                    seen_urls.add(data['url'])
+            events_data, tags_counter = scrape_eventbrite_events(location, product)
+            unique_events.extend(events_data)
     finally:
         spinner.stop()
 
+    display_paginated_events(unique_events, search_key)
+
+def search_spotlight_venues():
+    location = input('Enter location: ').replace(' ', '%20')
+
+    search_key = f'spotlight_{location}'
+
+    spinner = Spinner("Fetching spotlight venues...")
+    spinner.start()
+
+    unique_events = []
+
+    try:
+        if search_key in cache:
+            spinner.stop()
+            print("Using cached spotlight venues from hashtable.")
+            unique_events = cache[search_key]
+        else:
+            spinner.stop()
+            print("Scraping new spotlight venues.")
+            spinner.start()
+            spotlight_data = scrape_ticketweb_spotlight_venues(location)
+            unique_events.extend(spotlight_data)
+    finally:
+        spinner.stop()
+
+    display_paginated_events(unique_events, search_key)
+
+def display_paginated_events(unique_events, search_key):
     page_size = 5
     total_events = len(unique_events)
     current_page = 0
+    tags_counter = Counter()
 
     while current_page * page_size < total_events:
         start_index = current_page * page_size
-        end_index = start_index + page_size
+        end_index = min(start_index + page_size, total_events)
         display_events(unique_events, start_index, end_index, search_key, tags_counter)
         
         if end_index >= total_events:
@@ -239,14 +317,14 @@ while True:
             print("Exiting the program.")
             sys.exit()
 
-    if user_input != 's':
-        break
+    spinner = Spinner("Loading most common tags...")
+    spinner.start()
+    most_common_tags = tags_counter.most_common(6)
+    spinner.stop()
 
-spinner = Spinner("Loading most common tags...")
-spinner.start()
-most_common_tags = tags_counter.most_common(6)
-spinner.stop()
-
-print(f'\nThe most common tags are:')
-for tag, count in most_common_tags:
-    print(f'{tag}: {count}')
+    print(f'\nThe most common tags are:')
+    for tag, count in most_common_tags:
+        print(f'{tag}: {count}')
+        
+if __name__ == "__main__":
+    main()
