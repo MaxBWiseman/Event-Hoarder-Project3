@@ -75,68 +75,24 @@ def save_to_sheet(sheet, search_key, events):
     sheet.append_rows(data)
 # This data is then appended to the Google Sheet, if none of the data is available, 'N/A' is used.
 
-def load_from_sheet(sheet, search_key):
-    cell = sheet.findall(search_key)
-    if not cell:
-        return []
-
-    events = []
-    for cell in cell:
-        row_data = sheet.row_values(cell.row)
-        timestamp = datetime.fromisoformat(row_data[2])
-        if datetime.now() - timestamp > timedelta(hours=12):
-            continue
-
-        events.append({
-            'name': row_data[3],
-            'location': row_data[4],
-            'event_date_time': row_data[5],
-            'summary': row_data[6],
-            'event_price': row_data[7],
-            'url': row_data[8]
-        })
-
-    return events
 
 def display_events(events, start_index, end_index, search_key, tags_counter):
     collected_events = []
     for data in events[start_index:end_index]:
-        event_url = data['url']
-        page_detail = requests.get(event_url)
-        page_detail_soup = BeautifulSoup(page_detail.content, 'html.parser')
-
-        price_div = page_detail_soup.find('div', class_="conversion-bar__panel-info")
-        event_price = price_div.get_text(strip=True) if price_div else 'Free'
-
-        summary = page_detail_soup.find('p', class_='summary')
-        event_summary = summary.get_text(strip=True) if summary else 'No summary available'
-
-        date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
-        event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
-
-        tags = page_detail_soup.find_all('a', class_='tags-link')
-        for tag in tags:
-            tags_counter[tag.get_text(strip=True)] += 1
-
-        collected_events.append({
-            'name': data['name'],
-            'location': data['location'],
-            'event_date_time': event_date_time,
-            'summary': event_summary,
-            'event_price': event_price,
-            'url': event_url
-        })
-
-        print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {event_date_time}\nSummary: {event_summary}\nPrice: {event_price}')
-
+        print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["event_date_time"]}\nSummary: {data["summary"]}\nPrice: {data["event_price"]}')
+        collected_events.append(data)
+    spinner = Spinner("Saving events to Cache & Google Sheets...")
+    spinner.start()
     # Save the collected events to Google Sheets
     save_to_sheet(sheet, search_key, collected_events)
 
     # Cache the events in the hashtable
-    cache[search_key] = collected_events
+    cache[search_key] = events
+    
+    spinner.stop()
 
-def scrape_eventbrite_events(location, product):
-    url = f'https://www.eventbrite.com/d/united-kingdom--{location}/{product}/?page=1'
+def scrape_eventbrite_events(location, product, page_number=1):
+    url = f'https://www.eventbrite.com/d/united-kingdom--{location}/{product}/?page={page_number}'
     
     page = requests.get(url)
     
@@ -186,8 +142,8 @@ def scrape_eventbrite_events(location, product):
     
     return event_data, tags_counter
 
-def scrape_ticketweb_spotlight_venues(location):
-    url = f'https://www.ticketweb.uk/search?q={location}'
+def scrape_ticketweb_spotlight_venues(location, page_number=1):
+    url = f'https://www.ticketweb.uk/search?q={location}&page={page_number}'
     page = requests.get(url)
     soup = BeautifulSoup(page.content, 'html.parser')
     
@@ -247,26 +203,41 @@ def search_events():
     spinner.start()
 
     unique_events = []
+    page_number = 1
 
     try:
         # Check if the search term is in the cache
         if search_key in cache:
             spinner.stop()
             print("Using cached events from hashtable.")
-            spinner = Spinner("Using cached events from hashtable...")
-            spinner.start()
             unique_events = cache[search_key]
         else:
             spinner.stop()
-            print("Scraping new events.")
             spinner = Spinner("Scraping new events...")
             spinner.start()
-            events_data, tags_counter = scrape_eventbrite_events(location, product)
+            events_data, tags_counter = scrape_eventbrite_events(location, product, page_number)
             unique_events.extend(events_data)
+            cache[search_key] = unique_events
     finally:
         spinner.stop()
 
     display_paginated_events(unique_events, search_key)
+    
+    user_input = input("Do you want to search for more events in this category? (Y/N): ").strip().lower()
+    if user_input == 'y':
+        page_number += 1
+        spinner = Spinner("Fetching more events...")
+        spinner.start()
+        try:
+            events_data, tags_counter = scrape_eventbrite_events(location, product, page_number)
+            unique_events.extend(events_data)
+            cache[search_key] = unique_events
+        finally:
+            spinner.stop()
+        display_paginated_events(unique_events, search_key)
+    else:
+        print("Restarting the program.")
+        main()
 
 def search_spotlight_venues():
     location = input('Enter location: ').replace(' ', '%20')
@@ -277,6 +248,7 @@ def search_spotlight_venues():
     spinner.start()
 
     unique_events = []
+    page_number = 1
 
     try:
         if search_key in cache:
@@ -287,12 +259,31 @@ def search_spotlight_venues():
             spinner.stop()
             print("Scraping new spotlight venues.")
             spinner.start()
-            spotlight_data = scrape_ticketweb_spotlight_venues(location)
+            spotlight_data = scrape_ticketweb_spotlight_venues(location, page_number)
             unique_events.extend(spotlight_data)
+            cache[search_key] = unique_events
     finally:
         spinner.stop()
 
     display_paginated_events(unique_events, search_key)
+    
+    user_input = input("Do you want to search for more spotlight venues in this category? (Y/N): ").strip().lower()
+    if user_input == 'y':
+        page_number += 1
+        spinner = Spinner("Fetching more venues...")
+        spinner.start()
+        try:
+            spotlight_data = scrape_ticketweb_spotlight_venues(location, page_number)
+            unique_events.extend(spotlight_data)
+            cache[search_key] = unique_events
+        finally:
+            spinner.stop()
+        display_paginated_events(unique_events, search_key)
+    else:
+        print("Restarting the program.")
+        main()
+    
+    
 
 def display_paginated_events(unique_events, search_key):
     page_size = 5
