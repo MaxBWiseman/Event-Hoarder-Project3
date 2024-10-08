@@ -8,6 +8,8 @@ import threading
 import sys
 import time
 import re
+from datetime import datetime
+from dateutil import parser
 
 class Spinner:
     def __init__(self, message='Loading...'):
@@ -63,6 +65,8 @@ def save_to_sheet(sheet, search_key, events):
             sheet.delete_rows(cell.row)
             cell = sheet.find(unique_id)
         # Delete existing rows with the same unique ID
+        
+        
 
         data.append([
             search_key, unique_id, timestamp,
@@ -80,13 +84,87 @@ def display_events(events, start_index, end_index, search_key, tags_counter, use
     collected_events = events[start_index:end_index]
     for data in collected_events:
         if isinstance(data, dict):
-            print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["event_date_time"]}\nPrice: {data["event_price"]}')
+            print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["show_date_time"]}\nPrice: {data["event_price"]}')
         else:
             print(f"Skipping invalid event data: {data}")
     save_to_sheet(sheet, search_key, collected_events)
 
     # Cache the events in the hashtable
     cache[search_key] = events
+    
+    
+def parsed_scraped_date(date_time):
+    if 'No date and time available' in date_time or not date_time.strip():
+        return 'N/A'
+    # If the date_time is not available, return 'N/A'
+    
+    replacements = {
+        'Monday': '',
+        'Mon': '',
+        'Tuesday': '',
+        'Tue': '',
+        'Wednesday': '',
+        'Wed': '',
+        'Thursday': '',
+        'Thu': '',
+        'Friday': '',
+        'Fri': '',
+        'Saturday': '',
+        'Sat': '',
+        'Sunday': '',
+        'Sun': '',
+        'Starts on': '',
+        'GMT': '',
+        'GMT+1': '',
+        'January': 'Jan',
+        'February': 'Feb',
+        'March': 'Mar',
+        'April': 'Apr',
+        'May': 'May',
+        'June': 'Jun',
+        'July': 'Jul',
+        'August': 'Aug',
+        'September': 'Sep',
+        'October': 'Oct',
+        'November': 'Nov',
+        'December': 'Dec',
+        'pm': 'PM',
+        'am': 'AM',
+        '·': '',
+        ' - ': ' ',
+        '+1': '',
+    }
+
+    for key, value in replacements.items():
+        date_time = date_time.replace(key, value)
+    # Replace the long names of the days and months with their abbreviations
+    # Also replace other unwanted strings
+
+    # Remove any extra spaces and commas
+    date_time = ' '.join(date_time.split()).replace(',', '')
+    
+    # For cases where users enter date ranges, only take the first date
+    date_time_parts = date_time.split(' ')
+    # Only take the first 5 parts of the date_time
+    if len(date_time_parts) > 5:
+        date_time = ' '.join(date_time_parts[:5])
+    # If the length of the date_time is less than 5, return the date_time as is
+    # If the length of the date_time is greater than 5, only take the first 5 parts of the date_time
+    # parts example: ['Sat', 'Jan', '1', '2022', '12:00']
+
+    try:
+        # Use dateutil.parser to parse the date
+        dt = parser.parse(date_time, fuzzy=True)
+    except ValueError:
+        raise ValueError(f"Date format not recognized: {date_time}")
+    # parser.parse will try to parse the date and time from the string
+    # fuzzy=True allows for more flexibility in the date format
+
+    # Format the datetime object into the desired format
+    formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
+
+    return formatted_date
+    
     
 
 def scrape_eventbrite_events(location, product, page_number):
@@ -128,13 +206,16 @@ def scrape_eventbrite_events(location, product, page_number):
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
 
+        date_parsed = parsed_scraped_date(event_date_time)
+        
         tags = page_detail_soup.find_all('a', class_='tags-link')
         for tag in tags:
             tags_counter[tag.get_text(strip=True)] += 1
 
         event_info.update({
             'location': event_location,
-            'event_date_time': event_date_time,
+            'show_date_time': event_date_time, # More clearer user version of the date
+            'event_date_time': date_parsed,
             'summary': event_summary,
             'event_price': event_price
         })
@@ -186,13 +267,15 @@ def scrape_eventbrite_top_events(country, location, category_slug, page_number=1
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
 
+        date_parsed = parsed_scraped_date(event_date_time)
+        
         tags = page_detail_soup.find_all('a', class_='tags-link')
         for tag in tags:
             tags_counter[tag.get_text(strip=True)] += 1
 
         event_info.update({
             'location': event_location,
-            'event_date_time': event_date_time,
+            'event_date_time': date_parsed,
             'summary': event_summary,
             'event_price': event_price
         })
@@ -246,10 +329,11 @@ def scrape_eventbrite_top_events_no_category(location, country):
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
 
-
+        date_parsed = parsed_scraped_date(event_date_time)
+        
         event_info.update({
             'location': event_location,
-            'event_date_time': event_date_time,
+            'event_date_time': date_parsed,
             'summary': event_summary,
             'event_price': event_price
         })
