@@ -53,7 +53,7 @@ def save_to_sheet(sheet, search_key, events):
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     for event in events:
-        unique_id = event.get('url', 'N/A')  # Assuming 'url' is used as a unique identifier
+        unique_id = event.get('url', 'N/A')
         if unique_id == 'N/A':
             print(f"Skipping event with missing URL: {event}")
             continue
@@ -89,7 +89,7 @@ def display_events(events, start_index, end_index, search_key, tags_counter, use
     cache[search_key] = events
     
 
-def scrape_eventbrite_events(location, product, page_number=1):
+def scrape_eventbrite_events(location, product, page_number):
     url = f'https://www.eventbrite.com/d/united-kingdom--{location}/{product}/?page={page_number}'
     
     page = requests.get(url)
@@ -274,7 +274,6 @@ def main():
         elif choice == '3':
             print("Exiting the program.")
             sys.exit()
-            break
         else:
             print("Invalid choice. Please try again.")
 
@@ -306,27 +305,8 @@ def search_events():
     finally:
         spinner.stop()
 
-    display_paginated_events(unique_events, search_key, 'eventbrite')
-    
-    result = display_paginated_events(unique_events, search_key, 'eventbrite')
+    result = display_paginated_events(unique_events, search_key, 'eventbrite', location, None, None, product, page_number)
     if result == 'new_search':
-        main()
-        return
-    
-    user_input = input("Do you want to search for more events in this category? (Y/N): ").strip().lower()
-    if user_input == 'y':
-        page_number += 1
-        spinner = Spinner("Fetching more events...")
-        spinner.start()
-        try:
-            events_data, tags_counter = scrape_eventbrite_events(location, product, page_number)
-            unique_events.extend(events_data)
-            cache[search_key] = unique_events
-        finally:
-            spinner.stop()
-        display_paginated_events(unique_events, search_key, 'eventbrite')
-    else:
-        print("Restarting the program.")
         main()
         return
     
@@ -363,23 +343,21 @@ def search_top_categories():
         category = category.replace('&', 'and')
         return re.sub(r'\s+', '-', category.strip().lower())
 
-    #country = input('Enter country: ').replace(' ', '-')
     country = 'united-kingdom'
     location = input('Enter location: ').replace(' ', '')
-    
+
     display_categories()
     category = get_user_choice()
-    
+
     if category is None:
-        # User chose to search for all top categories
         search_key = f'all_top_categories_for_{location}_{country}'
         spinner = Spinner("Fetching events...")
         spinner.start()
 
         unique_events = []
+        page_number = 1
 
         try:
-            # Check if the search term is in the cache
             if search_key in cache:
                 spinner.stop()
                 print("Using cached events from hashtable.")
@@ -388,34 +366,19 @@ def search_top_categories():
                 spinner.stop()
                 spinner = Spinner("Scraping new events...")
                 spinner.start()
-                events_data = scrape_eventbrite_top_events_no_category(location, country)
+                events_data, tags_counter, event_count = scrape_eventbrite_top_events_no_category(location, country, page_number)
                 unique_events.extend(events_data)
                 cache[search_key] = unique_events
         finally:
             spinner.stop()
 
-        # Flatten the unique_events list if it contains nested lists
-        flat_unique_events = [event for sublist in unique_events for event in sublist] if any(isinstance(i, list) for i in unique_events) else unique_events
-
-        display_paginated_events(flat_unique_events, search_key, 'eventbrite_top')
-        
-        result = display_paginated_events(flat_unique_events, search_key, 'eventbrite_top')
+        result = display_paginated_events(unique_events, search_key, 'eventbrite_top', location, None, country, None, page_number)
         if result == 'new_search':
             main()
             return
-        
-        user_input = input("All top events for choses location have been viewed and saved. Return to menu (Y/N): ").strip().lower()
-        if user_input == 'y':
-            main()
-            return
-        else:
-            sys.exit()
     else:
-        # User chose a specific category
-        category_slug = generate_slug(category)
-        search_key = f'{category_slug}_{location}_{country}'
-
-        spinner = Spinner("Fetching category...")
+        search_key = f'{generate_slug(category)}_{location}_{country}'
+        spinner = Spinner("Fetching events...")
         spinner.start()
 
         unique_events = []
@@ -431,37 +394,16 @@ def search_top_categories():
                 spinner.stop()
                 spinner = Spinner("Scraping new events...")
                 spinner.start()
-                events_data, tags_counter = scrape_eventbrite_events(location, category_slug, page_number)
+                events_data, tags_counter, event_count = scrape_eventbrite_top_events(country, location, generate_slug(category), page_number)
                 unique_events.extend(events_data)
                 cache[search_key] = unique_events
         finally:
             spinner.stop()
 
-        display_paginated_events(unique_events, search_key, 'eventbrite')
-        
-        result = display_paginated_events(unique_events, search_key, 'eventbrite')
+        result = display_paginated_events(unique_events, search_key, 'eventbrite_top', location, generate_slug(category), country, None, page_number)
         if result == 'new_search':
             main()
             return
-        
-        user_input = input("Do you want to search for more events in this category? (Y/N): ").strip().lower()
-        if user_input == 'y':
-            page_number += 1
-            spinner = Spinner("Fetching more events...")
-            spinner.start()
-            try:
-                events_data, tags_counter = scrape_eventbrite_events(location, category_slug, page_number)
-                unique_events.extend(events_data)
-                cache[search_key] = unique_events
-            finally:
-                spinner.stop()
-            display_paginated_events(unique_events, search_key, 'eventbrite')
-        else:
-            print("Restarting the program.")
-            main()
-            return
-    
-    print(f"Searching for top categories in {country}, {location} for {category} (slug: {category_slug})")
 
 
 
@@ -477,15 +419,32 @@ def display_paginated_events(unique_events, search_key, user_selection, location
         display_events(unique_events, start_index, end_index, search_key, tags_counter, user_selection)
         
         if end_index >= total_events:
-            break
-        
+            # Fetch more events if available
+            page_number += 1
+            spinner = Spinner("Fetching more events...")
+            spinner.start()
+            try:
+                if user_selection == 'eventbrite':
+                    events_data, new_tags_counter = scrape_eventbrite_events(location, product, page_number)
+                elif user_selection == 'eventbrite_top':
+                    events_data, new_tags_counter, event_count = scrape_eventbrite_top_events(country, location, category_slug, page_number)
+                else:
+                    break  # No more events to fetch
+
+                if not events_data:
+                    break  # No more events to fetch
+
+                unique_events.extend(events_data)
+                tags_counter.update(new_tags_counter)
+                total_events = len(unique_events)
+            finally:
+                spinner.stop()
+
         user_input = input("Press 'Y' to see more events, 'S' to start a new search, or any other key to exit: ").strip().lower()
         if user_input == 's':
             return 'new_search'
         elif user_input == 'y':
             current_page += 1
-            if current_page * page_size >= total_events:
-                return 'fetch_more'
         else:
             print("Exiting the program.")
             sys.exit()
