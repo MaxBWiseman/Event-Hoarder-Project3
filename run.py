@@ -50,21 +50,43 @@ cache = {}
 def save_to_sheet(sheet, search_key, events):
     if len(sheet.get_all_values()) >= 1000:
         sheet.clear()
+# Clear google sheet if it has more than 1000 rows
     
     data = []
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+# Timestamps each entry in the Google Sheet
     
     for event in events:
         unique_id = event.get('url', 'N/A')
         if unique_id == 'N/A':
             print(f"Skipping event with missing URL: {event}")
             continue
+# 
         
         cell = sheet.find(unique_id)
         while cell:
             sheet.delete_rows(cell.row)
-            cell = sheet.find(unique_id)
-        # Delete existing rows with the same unique ID
+        # Delete existing row with the same unique ID as another event if occurs
+        
+        saved_date = event.get('timestamp', timestamp)
+        start_date = event.get('event_date_time', 'N/A')
+        
+        try:
+            checked_saved_date = datetime.strptime(saved_date, '%Y-%m-%d %H:%M:%S')
+            checked_start_date = datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            print(f"Removing event with invalid date: {event}")
+            cell = sheet.find(event.get('url', 'N/A'))
+            if cell:
+                sheet.delete_rows(cell.row)
+            continue
+        
+        if checked_saved_date > checked_start_date:
+            print(f'Removing event with outdated date: {event}')
+            cell = sheet.find(event.get('url', 'N/A'))
+            if cell:
+                sheet.delete_rows(cell.row)
+            continue
         
         
 
