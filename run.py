@@ -161,11 +161,11 @@ def parsed_scraped_date(date_time):
     # For cases where users enter date ranges, only take the first date
     date_time_parts = date_time.split(' ')
     # Only take the first 5 parts of the date_time
-    if len(date_time_parts) > 5:
-        date_time = ' '.join(date_time_parts[:5])
-    # If the length of the date_time is less than 5, return the date_time as is
-    # If the length of the date_time is greater than 5, only take the first 5 parts of the date_time
-    # parts example: ['2024-10-19', '16:30', '18:30', 'GMT+1']
+    if len(date_time_parts) > 3:
+        date_time = ' '.join(date_time_parts[:3])
+    # If the length of the date_time is less than 3, return the date_time as is
+    # If the length of the date_time is greater than 3, only take the first 5 parts of the date_time
+    # parts example: ['2024-10-19', '16:30:00']
 
     try:
         # Use dateutil.parser to parse the date
