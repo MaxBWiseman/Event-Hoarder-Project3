@@ -10,6 +10,8 @@ import time
 import re
 from datetime import datetime
 from dateutil import parser
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 
 class Spinner:
     def __init__(self, message='Loading...'):
@@ -41,32 +43,30 @@ class Spinner:
 # Clean up the spinner by overwriting it with spaces and moving the cursor back to the beginning of the line.
         sys.stdout.flush()
 
-gc = gspread.service_account(filename="creds.json")
-sheet = gc.open('Project3Python').sheet1
 
 # Hashtable to cache recently searched events
 cache = {}
 
-def save_to_sheet(sheet, search_key, events):
-    if len(sheet.get_all_values()) >= 1000:
-        sheet.clear()
-# Clear google sheet if it has more than 1000 rows
+uri = "mongodb+srv://GackedShotty:QJBdmnp2HnOH8cPP@project3.zbjlo.mongodb.net/?retryWrites=true&w=majority&appName=Project3"
+# Create a new client and connect to the server
+client = MongoClient(uri, server_api=ServerApi('1'))
+# Send a ping to confirm a successful connection
+try:
+    client.admin.command('ping')
+    print("Pinged your deployment. You successfully connected to MongoDB!")
+except Exception as e:
+    print(e)
     
-    data = []
+db = client['Event_Hoarder']
+collection = db['Event_Data']
+
+def save_to_mongodb(collection, search_key, events):
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-# Timestamps each entry in the Google Sheet
     
     for event in events:
         unique_id = event.get('url', 'N/A')
         if unique_id == 'N/A':
-            print(f"Skipping event with missing URL: {event}")
             continue
-# 
-        
-        cell = sheet.find(unique_id)
-        while cell:
-            sheet.delete_rows(cell.row)
-        # Delete existing row with the same unique ID as another event if occurs
         
         saved_date = event.get('timestamp', timestamp)
         start_date = event.get('event_date_time', 'N/A')
@@ -75,32 +75,25 @@ def save_to_sheet(sheet, search_key, events):
             checked_saved_date = datetime.strptime(saved_date, '%Y-%m-%d %H:%M:%S')
             checked_start_date = datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')
         except ValueError:
-            print(f"Removing event with invalid date: {event}")
-            cell = sheet.find(event.get('url', 'N/A'))
-            if cell:
-                sheet.delete_rows(cell.row)
+            collection.delete_one({'url': unique_id})
             continue
         
         if checked_saved_date > checked_start_date:
-            print(f'Removing event with outdated date: {event}')
-            cell = sheet.find(event.get('url', 'N/A'))
-            if cell:
-                sheet.delete_rows(cell.row)
+            collection.delete_one({'url': unique_id})
             continue
         
+        event_data = {
+            'search_key': search_key,
+            'url': unique_id,
+            'timestamp': timestamp,
+            'name': event.get('name', 'N/A'),
+            'location': event.get('location', 'N/A'),
+            'event_date_time': event.get('event_date_time', 'N/A'),
+            'summary': event.get('summary', 'N/A'),
+            'event_price': event.get('event_price', 'N/A')
+        }
         
-
-        data.append([
-            search_key, unique_id, timestamp,
-            event.get('name', 'N/A'),
-            event.get('location', 'N/A'),
-            event.get('event_date_time', 'N/A'),
-            event.get('summary', 'N/A'),
-            event.get('event_price', 'N/A')
-        ])
-    sheet.append_rows(data)
-    # This data is then appended to the Google Sheet, if none of the data is available, 'N/A' is used.
-
+        collection.update_one({'url': unique_id}, {'$set': event_data}, upsert=True)
 
 def display_events(events, start_index, end_index, search_key, tags_counter, user_selection):
     collected_events = events[start_index:end_index]
@@ -109,7 +102,7 @@ def display_events(events, start_index, end_index, search_key, tags_counter, use
             print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["show_date_time"]}\nPrice: {data["event_price"]}')
         else:
             print(f"Skipping invalid event data: {data}")
-    save_to_sheet(sheet, search_key, collected_events)
+    save_to_mongodb(collection, search_key, collected_events)
 
     # Cache the events in the hashtable
     cache[search_key] = events
@@ -172,7 +165,7 @@ def parsed_scraped_date(date_time):
         date_time = ' '.join(date_time_parts[:5])
     # If the length of the date_time is less than 5, return the date_time as is
     # If the length of the date_time is greater than 5, only take the first 5 parts of the date_time
-    # parts example: ['Sat', 'Jan', '1', '2022', '12:00']
+    # parts example: ['2024-10-19', '16:30', '18:30', 'GMT+1']
 
     try:
         # Use dateutil.parser to parse the date
