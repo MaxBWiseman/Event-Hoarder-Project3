@@ -353,16 +353,37 @@ def scrape_eventbrite_top_events_no_category(location, country):
         })
 
         event_data.append(event_info)
-    print(f"events scraped{len(event_data)}")
-    print(url)
     return event_data
+
+def manipulate_collection():
+    while True:
+        print("Choose an option:")
+        print("1. View all collected events")
+        print("2. Search for events")
+        print("3. Delete an event")
+        print("4. Exit")
+        choice = input("Enter your choice: ").strip()
+
+        if choice == '1':
+            view_all_events()
+        elif choice == '2':
+            search_events_in_collection()
+        elif choice == '3':
+            delete_event()
+        elif choice == '4':
+            print("Exiting the program.")
+            sys.exit()
+        else:
+            print("Invalid choice. Please try again.")
+
 
 def main():
     while True:
         print("Choose an option:")
         print("1. Search for quick events")
         print("2. Search for popular categories")
-        print("3. Exit")
+        print("3. View Collected Events")
+        print("4. Exit")
         print("#. Clear Database")
         choice = input("Enter your choice: ").strip()
 
@@ -371,6 +392,8 @@ def main():
         elif choice == '2':
             search_top_categories()
         elif choice == '3':
+            manipulate_collection()    
+        elif choice == '4':
             print("Exiting the program.")
             sys.exit()
         elif choice == '#':
