@@ -1,4 +1,3 @@
-import gspread
 import requests
 from bs4 import BeautifulSoup
 from collections import Counter
@@ -364,6 +363,7 @@ def main():
         print("1. Search for quick events")
         print("2. Search for popular categories")
         print("3. Exit")
+        print("#. Clear Database")
         choice = input("Enter your choice: ").strip()
 
         if choice == '1':
@@ -373,6 +373,10 @@ def main():
         elif choice == '3':
             print("Exiting the program.")
             sys.exit()
+        elif choice == '#':
+            collection.delete_many({})
+            print('Database cleared.')
+            main()
         else:
             print("Invalid choice. Please try again.")
 
