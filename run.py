@@ -88,25 +88,14 @@ def save_to_mongodb(collection, search_key, events):
             'name': event.get('name', 'N/A'),
             'location': event.get('location', 'N/A'),
             'event_date_time': event.get('event_date_time', 'N/A'),
+            'show_date_time': event.get('show_date_time', 'N/A'),
             'summary': event.get('summary', 'N/A'),
             'event_price': event.get('event_price', 'N/A')
         }
         
         collection.update_one({'url': unique_id}, {'$set': event_data}, upsert=True)
 
-def display_events(events, start_index, end_index, search_key, tags_counter, user_selection):
-    collected_events = events[start_index:end_index]
-    for data in collected_events:
-        if isinstance(data, dict):
-            print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["show_date_time"]}\nPrice: {data["event_price"]}')
-        else:
-            print(f"Skipping invalid event data: {data}")
-    save_to_mongodb(collection, search_key, collected_events)
 
-    # Cache the events in the hashtable
-    cache[search_key] = events
-    
-    
 def parsed_scraped_date(date_time):
     if 'No date and time available' in date_time or not date_time.strip():
         return 'N/A'
@@ -218,7 +207,7 @@ def scrape_eventbrite_events(location, product, page_number):
         event_summary = summary.get_text(strip=True) if summary else 'No summary available'
 
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
-        event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
+        event_date_time = date_time.get_text(strip=True).replace('Show map', '') if date_time else 'No date and time available'
 
         date_parsed = parsed_scraped_date(event_date_time)
         
@@ -279,7 +268,7 @@ def scrape_eventbrite_top_events(country, location, category_slug, page_number=1
                 event_summary = p_element.get_text(strip=True)
 
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
-        event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
+        event_date_time = date_time.get_text(strip=True).replace('Show map', '') if date_time else 'No date and time available'
 
         date_parsed = parsed_scraped_date(event_date_time)
         
@@ -289,6 +278,7 @@ def scrape_eventbrite_top_events(country, location, category_slug, page_number=1
 
         event_info.update({
             'location': event_location,
+            'show_date_time': event_date_time,
             'event_date_time': date_parsed,
             'summary': event_summary,
             'event_price': event_price
@@ -341,12 +331,13 @@ def scrape_eventbrite_top_events_no_category(location, country):
                 event_summary = p_element.get_text(strip=True)
 
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
-        event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
+        event_date_time = date_time.get_text(strip=True).replace('Show map', '') if date_time else 'No date and time available'
 
         date_parsed = parsed_scraped_date(event_date_time)
         
         event_info.update({
             'location': event_location,
+            'show_date_time': event_date_time,
             'event_date_time': date_parsed,
             'summary': event_summary,
             'event_price': event_price
@@ -357,11 +348,11 @@ def scrape_eventbrite_top_events_no_category(location, country):
 
 def manipulate_collection():
     while True:
-        print("Choose an option:")
+        print("Choose an option & print to CSV:")
         print("1. View all collected events")
         print("2. Search for events")
         print("3. Delete an event")
-        print("4. Exit")
+        print("4. Main Menu")
         choice = input("Enter your choice: ").strip()
 
         if choice == '1':
@@ -369,13 +360,47 @@ def manipulate_collection():
         elif choice == '2':
             search_events_in_collection()
         elif choice == '3':
-            delete_event()
+            delete_events()
         elif choice == '4':
-            print("Exiting the program.")
-            sys.exit()
+            print("Going back to the main menu.")
+            main()
         else:
             print("Invalid choice. Please try again.")
 
+def view_all_events():
+    all_events = list(collection.find({}))
+    user_selection = 'collection-all'
+    if len(all_events) == 0:
+        print('No events found')
+        return
+
+    result = display_events(all_events, 0, len(all_events), user_selection, search_key=None)
+    
+    if result == 'csv':
+        print(input('Would you like to save the events to a CSV file? (Y/N): '))
+        if input().strip().lower() == 'y':
+            save_to_csv(all_events)
+        else:
+            print('Events not saved to CSV.')
+            manipulate_collection()
+    
+
+def display_events(events, start_index, end_index, user_selection, search_key):
+    collected_events = events[start_index:end_index]
+    for data in collected_events:
+        if isinstance(data, dict):
+            print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["show_date_time"]}\nPrice: {data["event_price"]}')
+        else:
+            print(f"Skipping invalid event data: {data}")
+            
+    if user_selection == 'collection-all':
+        return 'csv'
+    elif user_selection == 'eventbrite' or user_selection == 'eventbrite_top':
+        save_to_mongodb(collection, search_key, collected_events)
+
+    # Cache the events in the hashtable
+    cache[search_key] = events
+    
 
 def main():
     while True:
@@ -408,6 +433,8 @@ def search_events():
     location = input('Enter location: ').replace(' ', '%20')
 
     search_key = f'{product}_{location}'
+    
+    user_selection = 'eventbrite'
 
     spinner = Spinner("Fetching events...")
     spinner.start()
@@ -431,7 +458,8 @@ def search_events():
     finally:
         spinner.stop()
 
-    result = display_paginated_events(unique_events, search_key, 'eventbrite', location, None, None, product, page_number)
+    result = display_paginated_events(unique_events, search_key, user_selection, location, product, page_number)
+    
     if result == 'new_search':
         main()
         return
@@ -445,6 +473,8 @@ def search_top_categories():
         "Dating", "Film & Media", "Fashion", "Government", "Auto, Boat & Air",
         "School Activities"
     ]
+    
+    user_selection = 'eventbrite_top'
 
     def display_categories():
         print("Please choose a category:")
@@ -453,7 +483,7 @@ def search_top_categories():
 
     def get_user_choice():
         while True:
-            user_input = input("Enter the number of your choice, or nothing to search all top events: ")
+            user_input = input(f"Enter the number of your choice, or nothing to search all top events in {location}: ")
             if user_input == "":
                 return None
             try:
@@ -476,7 +506,7 @@ def search_top_categories():
     category = get_user_choice()
 
     if category is None:
-        search_key = f'all_top_categories_for_{location}_{country}'
+        search_key = f'all_top_categories_{location}_{country}'
         spinner = Spinner("Fetching events...")
         spinner.start()
 
@@ -492,13 +522,13 @@ def search_top_categories():
                 spinner.stop()
                 spinner = Spinner("Scraping new events...")
                 spinner.start()
-                events_data, tags_counter, event_count = scrape_eventbrite_top_events_no_category(location, country, page_number)
+                events_data = scrape_eventbrite_top_events_no_category(location, country)
                 unique_events.extend(events_data)
                 cache[search_key] = unique_events
         finally:
             spinner.stop()
 
-        result = display_paginated_events(unique_events, search_key, 'eventbrite_top', location, None, country, None, page_number)
+        result = display_paginated_events(unique_events, search_key, 'eventbrite_top', location, country, page_number)
         if result == 'new_search':
             main()
             return
@@ -526,14 +556,14 @@ def search_top_categories():
         finally:
             spinner.stop()
 
-        result = display_paginated_events(unique_events, search_key, 'eventbrite_top', location, generate_slug(category), country, None, page_number)
+        result = display_paginated_events(unique_events, search_key, user_selection, location, generate_slug(category), country, page_number)
+        
         if result == 'new_search':
             main()
             return
 
 
-
-def display_paginated_events(unique_events, search_key, user_selection, location=None, category_slug=None, country=None, product=None, page_number=1):
+def display_paginated_events(unique_events, search_key, user_selection, location=None, country=None, category_slug=None, product=None, page_number=1):
     page_size = 5
     total_events = len(unique_events)
     current_page = 0
@@ -542,7 +572,7 @@ def display_paginated_events(unique_events, search_key, user_selection, location
     while current_page * page_size < total_events:
         start_index = current_page * page_size
         end_index = min(start_index + page_size, total_events)
-        display_events(unique_events, start_index, end_index, search_key, tags_counter, user_selection)
+        display_events(unique_events, start_index, end_index, user_selection, search_key)
         
         if end_index >= total_events:
             # Fetch more events if available
