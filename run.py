@@ -1,3 +1,5 @@
+import csv
+import os
 import requests
 from bs4 import BeautifulSoup
 from collections import Counter
@@ -346,9 +348,29 @@ def scrape_eventbrite_top_events_no_category(location, country):
         event_data.append(event_info)
     return event_data
 
+def save_to_csv(events):
+    directory = 'static'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    file_name = os.path.join(directory, 'collected_events.csv')
+    file_exists = os.path.exists(file_name)
+
+    with open(file_name, 'a', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=events[0].keys())
+
+        if not file_exists:
+            writer.writeheader()
+
+        for event in events:
+            writer.writerow(event)
+
+    print(f"Events saved to {file_name}")
+    return
+
 def manipulate_collection():
     while True:
-        print("Choose an option & print to CSV:")
+        print("\nChoose an option & print to CSV:")
         print("1. View all collected events")
         print("2. Search for events")
         print("3. Delete an event")
@@ -369,20 +391,24 @@ def manipulate_collection():
 
 def view_all_events():
     all_events = list(collection.find({}))
-    user_selection = 'collection-all'
+    user_selection = 'data-manipulation'
     if len(all_events) == 0:
         print('No events found')
         return
-
-    result = display_events(all_events, 0, len(all_events), user_selection, search_key=None)
     
-    if result == 'csv':
-        print(input('Would you like to save the events to a CSV file? (Y/N): '))
-        if input().strip().lower() == 'y':
+
+    result = display_events(all_events, 0, len(all_events), user_selection, search_key='None')
+    
+    
+    save_choice = input('Would you like to save the events to a CSV file? (Y/N): ').strip().lower()
+    if save_choice == 'y':
+        try:
             save_to_csv(all_events)
-        else:
-            print('Events not saved to CSV.')
-            manipulate_collection()
+        except Exception as e:
+            print(f"Error saving events to CSV: {e}")
+    else:
+        print('Events not saved to CSV.')
+        main()
     
 
 def display_events(events, start_index, end_index, user_selection, search_key):
@@ -393,8 +419,8 @@ def display_events(events, start_index, end_index, user_selection, search_key):
         else:
             print(f"Skipping invalid event data: {data}")
             
-    if user_selection == 'collection-all':
-        return 'csv'
+    if user_selection == 'data-manipulation':
+        return
     elif user_selection == 'eventbrite' or user_selection == 'eventbrite_top':
         save_to_mongodb(collection, search_key, collected_events)
 
