@@ -203,7 +203,14 @@ def scrape_eventbrite_events(location, product, page_number):
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
         
         location_div = page_detail_soup.find('div', class_='location-info__address')
-        event_location = location_div.get_text().replace('Show map', '') if location_div else 'No location available'
+        # Code with help from Co-Pilot
+        if location_div:
+            event_location = location_div.get_text(strip=True)
+            event_location= re.sub(r'Show map$', '', event_location)
+        else:
+            event_location = 'No location available'
+        # End of Co-Pilot code, this code removes the 'Show map' text from the location
+        # even if its preceeded by another word, the issue was "United KingdomShow map"
 
         summary = page_detail_soup.find('p', class_='summary')
         event_summary = summary.get_text(strip=True) if summary else 'No summary available'
@@ -260,7 +267,14 @@ def scrape_eventbrite_top_events(country, location, category_slug, page_number=1
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
 
         location_div = page_detail_soup.find('div', class_='location-info__address')
-        event_location = location_div.get_text().replace('Show map', '') if location_div else 'No location available'
+         # Code with help from Co-Pilot
+        if location_div:
+            event_location = location_div.get_text(strip=True)
+            event_location= re.sub(r'Show map$', '', event_location)
+        else:
+            event_location = 'No location available'
+        # End of Co-Pilot code, this code removes the 'Show map' text from the location
+        # even if its preceeded by another word, the issue was "United KingdomShow map"
         
         summary_div = page_detail_soup.find('div', class_='eds-text--left')
         event_summary = 'No summary available'
@@ -319,7 +333,14 @@ def scrape_eventbrite_top_events_no_category(location, country):
         page_detail_soup = BeautifulSoup(page_detail.content, 'html.parser')
         
         location_div = page_detail_soup.find('div', class_='location-info__address')
-        event_location = location_div.get_text().replace('Show map', '') if location_div else 'No location available'
+         # Code with help from Co-Pilot
+        if location_div:
+            event_location = location_div.get_text(strip=True)
+            event_location= re.sub(r'Show map$', '', event_location)
+        else:
+            event_location = 'No location available'
+        # End of Co-Pilot code, this code removes the 'Show map' text from the location
+        # even if its preceeded by another word, the issue was "United KingdomShow map"
         
         price_div = page_detail_soup.find('span', class_="eds-text-bm eds-text-weight--heavy")
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
@@ -395,6 +416,48 @@ def manipulate_collection():
         else:
             print("Invalid choice. Please try again.")
 
+def get_unique_search_keys():
+    pipeline = [
+        {'$group': {'_id': '$search_key'}},
+    ]
+    unique_search_keys = list(collection.aggregate(pipeline))
+    return [key['_id'] for key in unique_search_keys]
+# This function will return a list of unique search keys from the mongodb collection
+# The pipeline will group the documents by the search_key field and return only unique values
+
+
+def search_events_in_collection():
+    unique_search_keys = get_unique_search_keys()
+    user_selection = 'data-manipulation'
+    
+    if len(unique_search_keys) == 0:
+        print("No events found in the collection.")
+        return
+    
+    print("-------------------------------------\nChoose a search key:")
+    for i, key in enumerate(unique_search_keys, 1):
+        print(f"{i}. {key}")
+        
+    choice = input("\nEnter the number of your choice: ").strip()
+    all_events = list(collection.find({'search_key': unique_search_keys[int(choice) - 1]}))
+    
+    if not all_events:
+        print("No events found for the selected search key.")
+        return
+    
+    display_events(all_events, 0, len(all_events), user_selection, search_key=unique_search_keys[int(choice) - 1])
+
+    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV file? (Y/N): ').strip().lower()
+    if save_choice == 'y':
+        try:
+            save_to_csv(all_events)
+        except Exception as e:
+            print(f"Error saving events to CSV: {e}")
+    else:
+        print('Events not saved to CSV.')
+        main()
+
+
 def view_all_events():
     all_events = list(collection.find({}))
     user_selection = 'data-manipulation'
@@ -402,11 +465,9 @@ def view_all_events():
         print('No events found')
         return
     
-
     result = display_events(all_events, 0, len(all_events), user_selection, search_key='None')
     
-    
-    save_choice = input('Would you like to save the events to a CSV file? (Y/N): ').strip().lower()
+    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV file? (Y/N): ').strip().lower()
     if save_choice == 'y':
         try:
             save_to_csv(all_events)
@@ -589,7 +650,7 @@ def main():
             sys.exit()
         elif choice == '#':
             collection.delete_many({})
-            print('Database cleared.')
+            print('-------------------------------------\nDatabase cleared\n-------------------------------------.')
             main()
         else:
             print("Invalid choice. Please try again.")
@@ -628,7 +689,7 @@ def display_paginated_events(unique_events, search_key, user_selection, location
             finally:
                 spinner.stop()
 
-        user_input = input("Press 'Y' to see more events, 'S' to start a new search, or any other key to exit: ").strip().lower()
+        user_input = input("-------------------------------------\nPress 'Y' to see more events, 'S' to start a new search, or any other key to exit: ").strip().lower()
         if user_input == 's':
             return 'new_search'
         elif user_input == 'y':
