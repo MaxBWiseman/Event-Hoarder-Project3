@@ -203,13 +203,13 @@ def scrape_eventbrite_events(location, product, page_number):
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
         
         location_div = page_detail_soup.find('div', class_='location-info__address')
-        event_location = location_div.get_text(strip=True) if location_div else 'No location available'
+        event_location = location_div.get_text().replace('Show map', '') if location_div else 'No location available'
 
         summary = page_detail_soup.find('p', class_='summary')
         event_summary = summary.get_text(strip=True) if summary else 'No summary available'
 
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
-        event_date_time = date_time.get_text(strip=True).replace('Show map', '') if date_time else 'No date and time available'
+        event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
 
         date_parsed = parsed_scraped_date(event_date_time)
         
@@ -260,7 +260,7 @@ def scrape_eventbrite_top_events(country, location, category_slug, page_number=1
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
 
         location_div = page_detail_soup.find('div', class_='location-info__address')
-        event_location = location_div.get_text(strip=True) if location_div else 'No location available'
+        event_location = location_div.get_text().replace('Show map', '') if location_div else 'No location available'
         
         summary_div = page_detail_soup.find('div', class_='eds-text--left')
         event_summary = 'No summary available'
@@ -270,7 +270,7 @@ def scrape_eventbrite_top_events(country, location, category_slug, page_number=1
                 event_summary = p_element.get_text(strip=True)
 
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
-        event_date_time = date_time.get_text(strip=True).replace('Show map', '') if date_time else 'No date and time available'
+        event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
 
         date_parsed = parsed_scraped_date(event_date_time)
         
@@ -319,7 +319,7 @@ def scrape_eventbrite_top_events_no_category(location, country):
         page_detail_soup = BeautifulSoup(page_detail.content, 'html.parser')
         
         location_div = page_detail_soup.find('div', class_='location-info__address')
-        event_location = location_div.get_text(strip=True) if location_div else 'No location available'
+        event_location = location_div.get_text().replace('Show map', '') if location_div else 'No location available'
         
         price_div = page_detail_soup.find('span', class_="eds-text-bm eds-text-weight--heavy")
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
@@ -333,7 +333,7 @@ def scrape_eventbrite_top_events_no_category(location, country):
                 event_summary = p_element.get_text(strip=True)
 
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
-        event_date_time = date_time.get_text(strip=True).replace('Show map', '') if date_time else 'No date and time available'
+        event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
 
         date_parsed = parsed_scraped_date(event_date_time)
         
@@ -355,15 +355,21 @@ def save_to_csv(events):
     
     file_name = os.path.join(directory, 'collected_events.csv')
     file_exists = os.path.exists(file_name)
+    
+    fields = ['name', 'location', 'show_date_time', 'event_price', 'summary', 'url']
 
     with open(file_name, 'a', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=events[0].keys())
+        writer = csv.DictWriter(file, fieldnames=fields)
 
         if not file_exists:
             writer.writeheader()
 
         for event in events:
-            writer.writerow(event)
+            filtered_event = {field: event[field] for field in fields if field in event}
+            # this will only include the fields that are in the fields list above, so that
+            # fields that only have a programmatic purpose are not included in the CSV
+            # it works by creating a new dictionary with only the fields that are in the fields list
+            writer.writerow(filtered_event)
 
     print(f"Events saved to {file_name}")
     return
@@ -427,33 +433,6 @@ def display_events(events, start_index, end_index, user_selection, search_key):
     # Cache the events in the hashtable
     cache[search_key] = events
     
-
-def main():
-    while True:
-        print("Choose an option:")
-        print("1. Search for quick events")
-        print("2. Search for popular categories")
-        print("3. View Collected Events")
-        print("4. Exit")
-        print("#. Clear Database")
-        choice = input("Enter your choice: ").strip()
-
-        if choice == '1':
-            search_events()
-        elif choice == '2':
-            search_top_categories()
-        elif choice == '3':
-            manipulate_collection()    
-        elif choice == '4':
-            print("Exiting the program.")
-            sys.exit()
-        elif choice == '#':
-            collection.delete_many({})
-            print('Database cleared.')
-            main()
-        else:
-            print("Invalid choice. Please try again.")
-
 def search_events():
     product = input('Enter event type or name: ').replace(' ', '%20')
     location = input('Enter location: ').replace(' ', '%20')
@@ -490,6 +469,7 @@ def search_events():
         main()
         return
     
+
 def search_top_categories():
     categories = [
         "Home & Lifestyle", "Business", "Health", "Performing & Visual Arts",
@@ -587,6 +567,32 @@ def search_top_categories():
         if result == 'new_search':
             main()
             return
+    
+def main():
+    while True:
+        print("Choose an option:")
+        print("1. Search for quick events")
+        print("2. Search for popular categories")
+        print("3. View Collected Events")
+        print("4. Exit")
+        print("#. Clear Database")
+        choice = input("Enter your choice: ").strip()
+
+        if choice == '1':
+            search_events()
+        elif choice == '2':
+            search_top_categories()
+        elif choice == '3':
+            manipulate_collection()    
+        elif choice == '4':
+            print("Exiting the program.")
+            sys.exit()
+        elif choice == '#':
+            collection.delete_many({})
+            print('Database cleared.')
+            main()
+        else:
+            print("Invalid choice. Please try again.")
 
 
 def display_paginated_events(unique_events, search_key, user_selection, location=None, country=None, category_slug=None, product=None, page_number=1):
