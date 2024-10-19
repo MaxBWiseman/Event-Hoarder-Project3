@@ -395,13 +395,14 @@ def save_to_csv(events):
     print(f"Events saved to {file_name}")
     return
 
-def manipulate_collection():
+def collection_menu():
     while True:
-        print("\nChoose an option & print to CSV:")
-        print("1. View all collected events")
-        print("2. Search for events")
-        print("3. Delete an event")
+        print("\nChoose an option to manipulate events or print to CSV:")
+        print("1. View all searched events")
+        print("2. View recent searches")
+        print("3. something")
         print("4. Main Menu")
+        print("#. Clear Database")
         choice = input("Enter your choice: ").strip()
 
         if choice == '1':
@@ -409,9 +410,13 @@ def manipulate_collection():
         elif choice == '2':
             search_events_in_collection()
         elif choice == '3':
-            delete_events()
+            something()
         elif choice == '4':
             print("Going back to the main menu.")
+            main()
+        elif choice == '#':
+            collection.delete_many({})
+            print('-------------------------------------\nDatabase cleared\n-------------------------------------.')
             main()
         else:
             print("Invalid choice. Please try again.")
@@ -425,6 +430,24 @@ def get_unique_search_keys():
 # This function will return a list of unique search keys from the mongodb collection
 # The pipeline will group the documents by the search_key field and return only unique values
 
+def event_manipulation_menu(events):
+    while True:
+        print('\nChoose an option to manipulate the events data:')
+        print('1. Compare events')
+        print('2. Sort events')
+        print('3. Filter events')
+        print('4. Main Menu')
+        choice = input('Enter your choice: ').strip()
+        
+        if choice == '1':
+            compare_events(events)
+        elif choice == '2':
+            sort_events(events)
+        elif choice == '3':
+            filter_events(events)
+        elif choice == '4':
+            print('Returning to the main menu.')
+            main()
 
 def search_events_in_collection():
     unique_search_keys = get_unique_search_keys()
@@ -447,15 +470,14 @@ def search_events_in_collection():
     
     display_events(all_events, 0, len(all_events), user_selection, search_key=unique_search_keys[int(choice) - 1])
 
-    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV file? (Y/N): ').strip().lower()
+    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV file (C) or perform tasks? (T): ').strip().lower()
     if save_choice == 'y':
         try:
             save_to_csv(all_events)
         except Exception as e:
             print(f"Error saving events to CSV: {e}")
     else:
-        print('Events not saved to CSV.')
-        main()
+        event_manipulation_menu(all_events)
 
 
 def view_all_events():
@@ -467,15 +489,15 @@ def view_all_events():
     
     result = display_events(all_events, 0, len(all_events), user_selection, search_key='None')
     
-    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV file? (Y/N): ').strip().lower()
+    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV file (C) or perform tasks? (T): ').strip().lower()
     if save_choice == 'y':
         try:
             save_to_csv(all_events)
         except Exception as e:
             print(f"Error saving events to CSV: {e}")
     else:
-        print('Events not saved to CSV.')
-        main()
+        event_manipulation_menu(all_events)
+        
     
 
 def display_events(events, start_index, end_index, user_selection, search_key):
@@ -632,8 +654,8 @@ def search_top_categories():
 def main():
     while True:
         print("Choose an option:")
-        print("1. Search for quick events")
-        print("2. Search for popular categories")
+        print("1. Quick Search & Collect")
+        print("2. Search & Collect Top Categories")
         print("3. View Collected Events")
         print("4. Exit")
         print("#. Clear Database")
@@ -644,7 +666,7 @@ def main():
         elif choice == '2':
             search_top_categories()
         elif choice == '3':
-            manipulate_collection()    
+            collection_menu()    
         elif choice == '4':
             print("Exiting the program.")
             sys.exit()
