@@ -172,8 +172,8 @@ def parsed_scraped_date(date_time):
     
     
 
-def scrape_eventbrite_events(location, product, page_number):
-    url = f'https://www.eventbrite.com/d/united-kingdom--{location}/{product}/?page={page_number}'
+def scrape_eventbrite_events(location, day, product, page_number, start_date, end_date):
+    url = f'https://www.eventbrite.com/d/united-kingdom--{location}/events--{day}/{product}/?page={page_number}&start_date={start_date}&end_date={end_date}'
     
     page = requests.get(url)
     
@@ -236,8 +236,8 @@ def scrape_eventbrite_events(location, product, page_number):
     
     return event_data, tags_counter
 
-def scrape_eventbrite_top_events(country, location, category_slug, page_number=1):
-    url = f'https://www.eventbrite.co.uk/d/{country}--{location}/{category_slug}--events/?page={page_number}'
+def scrape_eventbrite_top_events(country, day, location, category_slug, page_number, start_date, end_date):
+    url = f'https://www.eventbrite.co.uk/d/{country}--{location}/{category_slug}--events--{day}/?page={page_number}&start_date={start_date}&end_date={end_date}'
     
     page = requests.get(url)
     
@@ -540,7 +540,30 @@ def display_events(events, start_index, end_index, user_selection, search_key):
 def search_events():
     product = input('Enter event type or name: ').replace(' ', '%20')
     location = input('Enter location: ').replace(' ', '%20')
-
+    print('Would you like to enter a date? (Y/N)')
+    date_choice = input('Enter your choice: ').strip().lower()
+    
+    start_date = ''
+    end_date = ''
+    day = ''
+    
+    if date_choice == 'y':
+        print('Please enter an option: ')
+        print('1. Today')
+        print('2. Tomorrow')
+        print('3. This weekend')
+        print('4. Pick a date')
+        day = input('Enter the number of choice: ')
+        if day == '1':
+            day = 'today'
+        elif day == '2':
+            day = 'tomorrow'
+        elif day == '3':
+            day = 'this-weekend'
+        else:
+            start_date = input('Enter the start date (YYYY-MM-DD): ')
+            end_date = input('Enter the end date (YYYY-MM-DD): ')
+        
     search_key = f'{product}_{location}'
     
     user_selection = 'eventbrite'
@@ -561,7 +584,7 @@ def search_events():
             spinner.stop()
             spinner = Spinner("Scraping new events...")
             spinner.start()
-            events_data, tags_counter = scrape_eventbrite_events(location, product, page_number)
+            events_data, tags_counter = scrape_eventbrite_events(location, day, product, page_number, start_date, end_date)
             unique_events.extend(events_data)
             cache[search_key] = unique_events
     finally:
@@ -611,6 +634,29 @@ def search_top_categories():
 
     country = 'united-kingdom'
     location = input('Enter location: ').replace(' ', '')
+    print('Would you like to enter a date? (Y/N)')
+    date_choice = input('Enter your choice: ').strip().lower()
+    
+    start_date = ''
+    end_date = ''
+    day = ''
+    
+    if date_choice == 'y':
+        print('Please enter an option: ')
+        print('1. Today')
+        print('2. Tomorrow')
+        print('3. This weekend')
+        print('4. Pick a date')
+        day = input('Enter the number of choice: ')
+        if day == '1':
+            day = 'today'
+        elif day == '2':
+            day = 'tomorrow'
+        elif day == '3':
+            day = 'this-weekend'
+        else:
+            start_date = input('Enter the start date (YYYY-MM-DD): ')
+            end_date = input('Enter the end date (YYYY-MM-DD): ')
 
     display_categories()
     category = get_user_choice()
@@ -633,7 +679,7 @@ def search_top_categories():
             spinner.stop()
             spinner = Spinner("Scraping new events...")
             spinner.start()
-            events_data, tags_counter, event_count = scrape_eventbrite_top_events(country, location, generate_slug(category), page_number)
+            events_data, tags_counter, event_count = scrape_eventbrite_top_events(country, day, location, generate_slug(category), page_number, start_date, end_date)
             unique_events.extend(events_data)
             cache[search_key] = unique_events
     finally:
