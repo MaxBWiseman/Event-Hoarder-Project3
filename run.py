@@ -430,6 +430,22 @@ def get_unique_search_keys():
 # This function will return a list of unique search keys from the mongodb collection
 # The pipeline will group the documents by the search_key field and return only unique values
 
+def compare_events(events):
+    if len(events) < 2:
+        print('Not enough events to compare.')
+        return
+    
+    print('What would you like to compare?')
+    print('1. Cheapest/Free events')
+    print('2. Most expensive events')
+    print('3. Closest distance events')
+    print('4. Events happening soon')
+    print('5. Compare organizers')
+    print('5. Main Menu')
+    choice = input('Enter your choice: ').strip()
+    
+    
+
 def event_manipulation_menu(events):
     while True:
         print('\nChoose an option to manipulate the events data:')
@@ -504,9 +520,14 @@ def display_events(events, start_index, end_index, user_selection, search_key):
     collected_events = events[start_index:end_index]
     for data in collected_events:
         if isinstance(data, dict):
-            print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["show_date_time"]}\nPrice: {data["event_price"]}')
+            location = data.get('location', 'No location available')
+            show_date_time = data.get('show_date_time', 'No date and time available')
+            if location != 'No location available' and show_date_time != 'No date and time available':
+                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["show_date_time"]}\nPrice: {data["event_price"]}')
+            else:
+                continue # Skip invalid event data
         else:
-            print(f"Skipping invalid event data: {data}")
+            continue # Skip invalid event data
             
     if user_selection == 'data-manipulation':
         return
@@ -566,7 +587,7 @@ def search_top_categories():
     user_selection = 'eventbrite_top'
 
     def display_categories():
-        print("Please choose a category:")
+        print("\nPlease choose a category:")
         for i, category in enumerate(categories, 1):
             print(f"{i}. {category}")
 
@@ -594,80 +615,92 @@ def search_top_categories():
     display_categories()
     category = get_user_choice()
 
-    if category is None:
-        search_key = f'all_top_categories_{location}_{country}'
-        spinner = Spinner("Fetching events...")
-        spinner.start()
-
-        unique_events = []
-        page_number = 1
-
-        try:
-            if search_key in cache:
-                spinner.stop()
-                print("Using cached events from hashtable.")
-                unique_events = cache[search_key]
-            else:
-                spinner.stop()
-                spinner = Spinner("Scraping new events...")
-                spinner.start()
-                events_data = scrape_eventbrite_top_events_no_category(location, country)
-                unique_events.extend(events_data)
-                cache[search_key] = unique_events
-        finally:
-            spinner.stop()
-
-        result = display_paginated_events(unique_events, search_key, 'eventbrite_top', location, country, page_number)
-        if result == 'new_search':
-            main()
-            return
-    else:
-        search_key = f'{generate_slug(category)}_{location}_{country}'
-        spinner = Spinner("Fetching events...")
-        spinner.start()
-
-        unique_events = []
-        page_number = 1
-
-        try:
-            # Check if the search term is in the cache
-            if search_key in cache:
-                spinner.stop()
-                print("Using cached events from hashtable.")
-                unique_events = cache[search_key]
-            else:
-                spinner.stop()
-                spinner = Spinner("Scraping new events...")
-                spinner.start()
-                events_data, tags_counter, event_count = scrape_eventbrite_top_events(country, location, generate_slug(category), page_number)
-                unique_events.extend(events_data)
-                cache[search_key] = unique_events
-        finally:
-            spinner.stop()
-
-        result = display_paginated_events(unique_events, search_key, user_selection, location, generate_slug(category), country, page_number)
-        
-        if result == 'new_search':
-            main()
-            return
     
+    search_key = f'{generate_slug(category)}_{location}_{country}'
+    spinner = Spinner("Fetching events...")
+    spinner.start()
+
+    unique_events = []
+    page_number = 1
+
+    try:
+        # Check if the search term is in the cache
+        if search_key in cache:
+            spinner.stop()
+            print("Using cached events from hashtable.")
+            unique_events = cache[search_key]
+        else:
+            spinner.stop()
+            spinner = Spinner("Scraping new events...")
+            spinner.start()
+            events_data, tags_counter, event_count = scrape_eventbrite_top_events(country, location, generate_slug(category), page_number)
+            unique_events.extend(events_data)
+            cache[search_key] = unique_events
+    finally:
+        spinner.stop()
+
+    result = display_paginated_events(unique_events, search_key, user_selection, location, generate_slug(category), country, page_number)
+        
+    if result == 'new_search':
+        main()
+        return
+
+
+def search_top_events():
+    
+    country = 'united-kingdom'
+    location = input('Enter location: ').replace(' ', '')
+    search_key = f'all_top_events_{location}_{country}'
+    spinner = Spinner("Fetching events...")
+    spinner.start()
+    unique_events = []
+    page_number = 1
+
+    try:
+        if search_key in cache:
+            spinner.stop()
+            print("Using cached events from hashtable.")
+            unique_events = cache[search_key]
+        else:
+            spinner.stop()
+            spinner = Spinner("Scraping new events...")
+            spinner.start()
+            events_data = scrape_eventbrite_top_events_no_category(location, country)
+            unique_events.extend(events_data)
+            cache[search_key] = unique_events
+    finally:
+        spinner.stop()
+
+    result = display_paginated_events(unique_events, search_key, 'eventbrite_top', location, country, page_number)
+    if result == 'new_search':
+        main()
+        return
+
+
 def main():
+    welcome = 0
     while True:
-        print("Choose an option:")
+        if welcome < 1:
+            print("-------------------------------------\nWelcome to Event Hoarder!\nSearch for events and they will be automatically be saved to a database to\nbe used for printing to CSV or performing data manipulation tasks\n-------------------------------------")
+            welcome += 1
+        print("\nChoose an option:")
         print("1. Quick Search & Collect")
-        print("2. Search & Collect Top Categories")
-        print("3. View Collected Events")
-        print("4. Exit")
+        print("2. Search & Collect Top Events")
+        print("3. Search & Collect Top Categories")
+        print("4. View Collected Events")
+        print("5. Exit")
         print("#. Clear Database")
         choice = input("Enter your choice: ").strip()
 
         if choice == '1':
             search_events()
         elif choice == '2':
-            search_top_categories()
+            search_top_events()
         elif choice == '3':
-            collection_menu()    
+            search_top_categories()
         elif choice == '4':
+            collection_menu()    
+        elif choice == '5':
             print("Exiting the program.")
             sys.exit()
         elif choice == '#':
@@ -675,7 +708,7 @@ def main():
             print('-------------------------------------\nDatabase cleared\n-------------------------------------.')
             main()
         else:
-            print("Invalid choice. Please try again.")
+            print("\nInvalid choice. Please try again.")
 
 
 def display_paginated_events(unique_events, search_key, user_selection, location=None, country=None, category_slug=None, product=None, page_number=1):
