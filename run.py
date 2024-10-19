@@ -13,6 +13,9 @@ from datetime import datetime
 from dateutil import parser
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Spinner:
     def __init__(self, message='Loading...'):
@@ -48,7 +51,7 @@ class Spinner:
 # Hashtable to cache recently searched events
 cache = {}
 
-uri = "mongodb+srv://GackedShotty:QJBdmnp2HnOH8cPP@project3.zbjlo.mongodb.net/?retryWrites=true&w=majority&appName=Project3"
+uri = os.getenv('MONGO_URI')
 # Create a new client and connect to the server
 client = MongoClient(uri, server_api=ServerApi('1'))
 # Send a ping to confirm a successful connection
