@@ -239,6 +239,8 @@ def scrape_eventbrite_events(location, day, product, page_number, start_date, en
     
     return event_data, tags_counter
 
+
+# FIXME: Scrape top events seems to only scrape about half the events on the top results page for the given area, must look into this
 def scrape_eventbrite_top_events(country, day, location, category_slug, page_number, start_date, end_date):
     url = f'https://www.eventbrite.co.uk/d/{country}--{location}/{category_slug}--events--{day}/?page={page_number}&start_date={start_date}&end_date={end_date}'
     
