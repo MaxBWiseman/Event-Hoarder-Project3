@@ -64,32 +64,38 @@ except Exception as e:
 db = client['Event_Hoarder']
 collection = db['Event_Data']
 
-def save_to_mongodb(collection, search_key, events):
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+def check_and_delete_old_events():
+    current_date = datetime.now().date()
+    events = collection.find({})
     
     for event in events:
         unique_id = event.get('url', 'N/A')
         if unique_id == 'N/A':
             continue
         
-        saved_date = event.get('timestamp', timestamp)
         start_date = event.get('event_date_time', 'N/A')
         
         try:
-            checked_saved_date = datetime.strptime(saved_date, '%Y-%m-%d %H:%M:%S')
-            checked_start_date = datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')
+            checked_start_date = datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S').date()
         except ValueError:
             collection.delete_one({'url': unique_id})
             continue
         
-        if checked_saved_date > checked_start_date:
+        if current_date > checked_start_date:
             collection.delete_one({'url': unique_id})
+
+check_and_delete_old_events()
+
+def save_to_mongodb(collection, search_key, events):
+   
+    for event in events:
+        unique_id = event.get('url', 'N/A')
+        if unique_id == 'N/A':
             continue
         
         event_data = {
             'search_key': search_key,
             'url': unique_id,
-            'timestamp': timestamp,
             'name': event.get('name', 'N/A'),
             'location': event.get('location', 'N/A'),
             'event_date_time': event.get('event_date_time', 'N/A'),
@@ -435,35 +441,89 @@ def get_unique_search_keys():
 # This function will return a list of unique search keys from the mongodb collection
 # The pipeline will group the documents by the search_key field and return only unique values
 
-def compare_events(events):
+# This function was built with help from Co-Pilot when asked how could i extract the price from the event_price field
+# Its suggestion was the re module. As i needed to remove other strings and currency symbols from the event_price field
+def extract_price(price_str):
+    # Use regular expression to find the first occurrence of a number in the string
+    match = re.search(r'\d+(\.\d+)?', price_str)
+    # \d+(\.\d+)? means match one or more digits followed by an optional decimal point and one or more digits
+    if match:
+        return float(match.group())
+    return 0.0
+"""
+The extract_price function uses a regular expression to find the first occurrence of a number in the event_price string.
+If a number is found, it is converted to a float and returned. If no number is found, 0.0 is returned.
+The sort_events function uses the extract_price function to extract the numeric part of the event_price before sorting. 
+"""
+
+def sort_events(events):
     if len(events) < 2:
-        print('Not enough events to compare.')
+        print('Not enough events to sort.')
         return
     
-    print('What would you like to compare?')
-    print('1. Cheapest/Free events')
-    print('2. Most expensive events')
-    print('3. Closest distance events')
-    print('4. Events happening soon')
-    print('5. Compare organizers')
-    print('5. Main Menu')
+    print('\nWhat would you like to sort?')
+    print('1. Free events')
+    print('2. Cheapest events')
+    print('3. Most expensive events')
+    print('4. Closest distance events')
+    print('5. Events happening soon')
+    print('6. Compare organizers')
+    print('7. Main Menu')
     choice = input('Enter your choice: ').strip()
     
+    # Lambda functions are a powerful tool for writing concise, one-off functions, especially useful in situations like sorting, filtering, and mapping.
+    if choice == '1':
+        free_events = [event for event in events if event.get('event_price', '').lower() in ['free', 'donation']]
+    # Filter in events with event_price of 'free' and 'donation' with list comprehension, if not found, return an empty list
+        display_events(free_events[::-1], 0, len(free_events), 'data-manipulation', 'None')
+    # Display the sorted events from bottom to top
+    elif choice == '2':
+        cheap_events = [event for event in events if event.get('event_price', '').lower() not in ['sold out', 'free']]
+    # Filter out events with event_price of 'free' and 'sold out' with list comprehension, if not found, return an empty list
+        cheap_events_sorted = sorted(cheap_events, key=lambda x: extract_price(x.get('event_price', '0')))
+    # Sort the remaining events in order based on event_price, the key argument specifies a custom sorting function for the sorted() method, and extracts a comparison key from each element.
+    # The lambda function is given as the key argument to the sorted() method, it takes argument x that represents each element in the list, and extracts the price from the event_price field
+    # with help from the extract_price function. The sorted() method will sort the events in ascending order based on the extracted price.
+        display_events(cheap_events_sorted[::-1], 0, len(cheap_events_sorted), 'data-manipulation', 'None')
+    # Display the sorted events from bottom to top, ::-1 is used to reverse the list
+    elif choice == '3':
+        paid_events = [event for event in events if event.get('event_price', '').lower() not in ['free', 'donation']]
+    # Filter out events with event_price of 'free' and 'donation' with list comprehension, if not found, return an empty list
+        expensive_events_sorted = sorted(paid_events, key=lambda x: extract_price(x.get('event_price', '0')), reverse=True)
+    # Sort the remaining events in reverse order based on event_price, the key argument specifies a custom sorting function for the sorted() method, and extracts a comparison key from each element.
+    # The lambda function is given as the key argument to the sorted() method, it takes argument x that represents each element in the list, and extracts the price from the event_price field
+    # with help from the extract_price function. The sorted() method will sort the events in decending order based on the extracted price.
+        display_events(expensive_events_sorted[::-1], 0, len(expensive_events_sorted), 'data-manipulation', 'None')
+    # Display the sorted events from bottom to top , ::-1 is used to reverse the list
+    elif choice == '4':
+        print('Not implemented yet.')
+    elif choice == '5':
+        current_time = datetime.now()
+        soonest_events = sorted(
+        [event for event in events if event.get('event_date_time') and datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S') > current_time],
+        key=lambda x: datetime.strptime(x.get('event_date_time', ''), '%Y-%m-%d %H:%M:%S')
+        )
+        display_events(soonest_events[::-1], 0, len(soonest_events), 'data-manipulation', 'None')
+    elif choice == '6':
+        print('Not implemented yet.')
+    elif choice == '7':
+        print('Returning to the main menu.')
+        main()
     
 
 def event_manipulation_menu(events):
     while True:
         print('\nChoose an option to manipulate the events data:')
-        print('1. Compare events')
-        print('2. Sort events')
+        print('1. Sort events')
+        print('2. Compare events')
         print('3. Filter events')
         print('4. Main Menu')
         choice = input('Enter your choice: ').strip()
         
         if choice == '1':
-            compare_events(events)
-        elif choice == '2':
             sort_events(events)
+        elif choice == '2':
+            compare_events(events)
         elif choice == '3':
             filter_events(events)
         elif choice == '4':
