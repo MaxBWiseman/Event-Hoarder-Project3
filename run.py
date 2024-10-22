@@ -9,6 +9,7 @@ import threading
 import sys
 import time
 import re
+import math
 from datetime import datetime
 from dateutil import parser
 from pymongo.mongo_client import MongoClient
@@ -455,6 +456,29 @@ The extract_price function uses a regular expression to find the first occurrenc
 If a number is found, it is converted to a float and returned. If no number is found, 0.0 is returned.
 The sort_events function uses the extract_price function to extract the numeric part of the event_price before sorting. 
 """
+
+def compare_events(events):
+    if len(events) < 2:
+        print('Not enough events to compare.')
+        return
+    
+    print('\nWhat would you like to compare?')
+    print('1. Average price of events')
+    print('2. Median price of events')
+    print('3. Average events per month')
+    print('3. Event price distribution')
+    choice = input('Enter your choice: ').strip()
+    
+    if choice == '1':
+        price = [extract_price(event['event_price']) for event in events if 'event_price' in event]
+        # Extract the price from the event_price field for each event
+        result = sum(price) / len(price) if price else 0
+        # Calculate the average price of the events, sum the prices and divide by the number of prices
+        floored_result = math.floor(result)
+        # Round down the result to the nearest whole number
+        print(f'\nThe average price of events is: £{floored_result}')
+    
+    
 
 def sort_events(events):
     if len(events) < 2:
