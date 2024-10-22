@@ -10,6 +10,7 @@ import sys
 import time
 import re
 import math
+import matplotlib.pyplot as plt
 from datetime import datetime
 from dateutil import parser
 from pymongo.mongo_client import MongoClient
@@ -465,8 +466,13 @@ def compare_events(events):
     print('\nWhat would you like to compare?')
     print('1. Average price of events')
     print('2. Median price of events')
-    print('3. Average events per month')
-    print('3. Event price distribution')
+    print('3. Event count per day')
+    print('3. Event count per month')
+    print('4. Event price distribution')
+    print('5. Event dates over time')
+    print('6. Closest distance events')
+    print('7. Compare organizers')
+    print('8. Main Menu')
     choice = input('Enter your choice: ').strip()
     
     if choice == '1':
@@ -498,8 +504,32 @@ def compare_events(events):
         # If empty list, return 0
         print(f'\nThe median price of events is: £{result}')
     elif choice == '3':
-        price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
-            
+        event_months = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m') for event in events]
+        # List comprehension to extract the month and year from the event_date_time field for each event, the date is expected to be in the format 'YYYY-MM-DD HH:MM:SS' and is parsed to a datetime object.
+        # The second argument formats the datetime object to 'YYYY-MM' to be used to group the events by month
+        months_counts = Counter(event_months)
+        # Use the Counter class to count the occurrences of each month, works by setting a dictionary key with each collected month and incrementing the value each time the month is found
+        months, counts = zip(*sorted(months_counts.items()))
+        # Take the dictionary months_counts and retrieve its items as a list of tuples with items(), then sort the tuples by the keys (months) sorted(), take the sorted list of tuples and unpacks them into two lists, one for keys and one for values zip(*).
+        # the splat operator * allowed zip() to take the list of tuples and unpack them into two seperate lists, without it zip() would return one list of tuples
+        plt.bar(months, counts)
+        # Create a bar chart with the months on the x-axis and the counts on the y-axis
+        plt.title('Events By Month')
+        plt.xlabel
+        plt.ylabel('Number of Events')
+        plt.xticks(rotation=45)
+        # Rotate the x-axis labels by 45 degrees for better readability
+        plt.tight_layout()
+        # Automatic padding
+        image_path = 'data_visuals/event_price_distribution.png'
+        plt.savefig(image_path)
+        # Save the plot as an image
+        plt.close()
+        # I decided to use the matplotlib library to create various data visualizations
+        print(f'Event count per month saved as {image_path}')
+    elif choice == '4':
+        print('something')
+     
         
 
     
@@ -514,10 +544,8 @@ def sort_events(events):
     print('1. Free events')
     print('2. Cheapest events')
     print('3. Most expensive events')
-    print('4. Closest distance events')
-    print('5. Events happening soon')
-    print('6. Compare organizers')
-    print('7. Main Menu')
+    print('4. Events happening soon')
+    print('5. Main Menu')
     choice = input('Enter your choice: ').strip()
     
     # Lambda functions are a powerful tool for writing concise, one-off functions, especially useful in situations like sorting, filtering, and mapping.
@@ -545,17 +573,13 @@ def sort_events(events):
         display_events(expensive_events_sorted[::-1], 0, len(expensive_events_sorted), 'data-manipulation', 'None')
     # Display the sorted events from bottom to top , ::-1 is used to reverse the list
     elif choice == '4':
-        print('Not implemented yet.')
-    elif choice == '5':
         current_time = datetime.now()
         soonest_events = sorted(
         [event for event in events if event.get('event_date_time') and datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S') > current_time],
         key=lambda x: datetime.strptime(x.get('event_date_time', ''), '%Y-%m-%d %H:%M:%S')
         )
         display_events(soonest_events[::-1], 0, len(soonest_events), 'data-manipulation', 'None')
-    elif choice == '6':
-        print('Not implemented yet.')
-    elif choice == '7':
+    elif choice == '5':
         print('Returning to the main menu.')
         main()
     
@@ -861,7 +885,7 @@ def main():
         elif choice == '4':
             collection_menu()    
         elif choice == '5':
-            print("Exiting the program.")
+            print("-------------------------------------\nExiting the program\n-------------------------------------.")
             sys.exit()
         elif choice == '#':
             collection.delete_many({})
