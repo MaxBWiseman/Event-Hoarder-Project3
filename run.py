@@ -470,13 +470,38 @@ def compare_events(events):
     choice = input('Enter your choice: ').strip()
     
     if choice == '1':
-        price = [extract_price(event['event_price']) for event in events if 'event_price' in event]
-        # Extract the price from the event_price field for each event
+        price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
+        # Extract the price from the event_price field for each event, not including 'sold out', 'free', and 'donation' events
         result = sum(price) / len(price) if price else 0
         # Calculate the average price of the events, sum the prices and divide by the number of prices
         floored_result = math.floor(result)
         # Round down the result to the nearest whole number
         print(f'\nThe average price of events is: £{floored_result}')
+    elif choice == '2':
+        price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
+        # Extract the price from the event_price field for each event, not including 'sold out', 'free', and 'donation' events
+        if price:
+            price.sort()
+        # Sort the list of prices in ascending order
+            n = len(price)
+        # Get length of list
+            mid = n // 2
+        # Find the middle index
+            if n % 2 == 0:
+                result = (price[mid - 1] + price[mid]) / 2
+        # If the list length is even, the median is the average of the two middle elements
+            else:
+                result = price[mid]
+        # If the list length is odd, the median is the middle element
+        else:
+            result = 0
+        # If empty list, return 0
+        print(f'\nThe median price of events is: £{result}')
+    elif choice == '3':
+        price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
+            
+        
+
     
     
 
