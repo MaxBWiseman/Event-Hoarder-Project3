@@ -15,6 +15,7 @@ from datetime import datetime
 from dateutil import parser
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+from geopy.distance import geodesic
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -472,6 +473,48 @@ If a number is found, it is converted to a float and returned. If no number is f
 The sort_events function uses the extract_price function to extract the numeric part of the event_price before sorting. 
 """
 
+
+def get_coordinates(location, api_key):
+    url = f'https://maps.googleapis.com/maps/api/geocode/json?address={location}&key={api_key}'
+    # Construct the URL for the Google Maps Geocoding API
+    response = requests.get(url)
+    # Send a GET request to the URL
+    if response.status_code == 200:
+        data = response.json()
+    # If the response is successful, turn the response into a JSON object
+        if data['status'] == 'OK':
+    # Check if the status in the JSON object is 'OK'
+            location = data['results'][0]['geometry']['location']
+            return (location['lat'], location['lng'])
+    # Extract the latitude and longitude from the JSON object and return them as a tuple
+    return None
+
+def find_closest_events(user_location, events, api_key):
+    user_coordinates = get_coordinates(user_location, api_key)
+    # Get the coordinates of the user's location
+    if not user_coordinates:
+        print("User location could not be geocoded.")
+        return []
+
+    def distance_to_user(event):
+        event_coordinates = get_coordinates(event['location'], api_key)
+        # Get the coordinates of the event's location
+        if event_coordinates:
+            return geodesic(user_coordinates, event_coordinates).miles
+        # The geopy library's geodesic function calculates the distance between two points on the Earth's surface
+        # using the geodesic distance, which is more accurate than the haversine formula, as it accounts for the earths ellipsoidal shape,
+        # it returns the distance in miles. Sourch - https://www.askpython.com/python/examples/find-distance-between-two-geo-locations
+        return float('inf')
+        # If fails return infinity as this is a easy way to sort the events with no coordinates to the end of the list
+        
+    events_with_coordinates = [event for event in events if event.get('location')]
+    # Filter out events with no location
+    events_with_coordinates.sort(key=distance_to_user)
+    # Sort the events by using the distance_to_user function as the key
+    
+    return events_with_coordinates[::-1]
+    # Return the sorted events in reverse order
+
 def compare_events(events):
     if len(events) < 2:
         print('Not enough events to compare.')
@@ -484,7 +527,6 @@ def compare_events(events):
     print('4. Event count per month')
     print('5. Event price distribution')
     print('6. Event dates over time')
-    print('7. Closest distance events')
     print('8. Compare organizers')
     print('9. Main Menu')
     choice = input('Enter your choice: ').strip()
@@ -599,19 +641,11 @@ def compare_events(events):
         plt.close()
         print(f'Event dates over time saved as {image_path}')
     elif choice == '7':
-        user_location = input('Enter your location: ')
-        user_coordinates = get_coordinates(user_location)
-        if not user_coordinates:
-            print('Location cannot be found.')
-            
+        print('Not implemented yet.')
     else:
         print('No valid comparison to display.')
      
-        
-
-    
-    
-
+      
 def sort_events(events):
     if len(events) < 2:
         print('Not enough events to sort.')
@@ -622,7 +656,8 @@ def sort_events(events):
     print('2. Cheapest events')
     print('3. Most expensive events')
     print('4. Events happening soon')
-    print('5. Main Menu')
+    print('5. Closest distance events')
+    print('6. Main Menu')
     choice = input('Enter your choice: ').strip()
     
     # Lambda functions are a powerful tool for writing concise, one-off functions, especially useful in situations like sorting, filtering, and mapping.
@@ -657,6 +692,14 @@ def sort_events(events):
         )
         display_events(soonest_events[::-1], 0, len(soonest_events), 'data-manipulation', 'None')
     elif choice == '5':
+        user_location = input('Enter your postcode or specific location: ')
+        api_key = os.getenv('GOOGLE_MAPS_API_KEY')
+        closest_events = find_closest_events(user_location, events, api_key)
+        if closest_events:
+            display_events(closest_events, 0, len(closest_events), 'data-manipulation', 'None')
+        else:
+            print('No events found or location cannot be geocoded.')
+    elif choice == '6':
         print('Returning to the main menu.')
         main()
     
@@ -737,15 +780,17 @@ def display_events(events, start_index, end_index, user_selection, search_key):
         if isinstance(data, dict):
             location = data.get('location', 'No location available')
             show_date_time = data.get('show_date_time', 'No date and time available')
+            summary = data['summary']
+            truncated_summary = summary[:120] + '...' if len(summary) > 120 else summary
             if location != 'No location available' and show_date_time != 'No date and time available':
-                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["show_date_time"]}\nPrice: {data["event_price"]}')
+                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["show_date_time"]}\nPrice: {data["event_price"]}\nSummary: {truncated_summary}\nURL: {data["url"]}')
             else:
                 continue # Skip invalid event data
         else:
             continue # Skip invalid event data
             
     if user_selection == 'data-manipulation':
-        return
+        return print('-------------------------------------\nEvents displayed in relevance bottom to top.')
     elif user_selection == 'eventbrite' or user_selection == 'eventbrite_top':
         save_to_mongodb(collection, search_key, collected_events)
 
