@@ -216,15 +216,22 @@ def scrape_eventbrite_events(location, day, product, page_number, start_date, en
         location_div = page_detail_soup.find('div', class_='location-info__address')
         # Code with help from Co-Pilot
         if location_div:
-            event_location = location_div.get_text(strip=True)
+            event_location = location_div.get_text(separator=' ', strip=True)
             event_location= re.sub(r'Show map$', '', event_location)
         else:
             event_location = 'No location available'
         # End of Co-Pilot code, this code removes the 'Show map' text from the location
         # even if its preceeded by another word, the issue was "United KingdomShow map"
 
-        summary = page_detail_soup.find('p', class_='summary')
-        event_summary = summary.get_text(strip=True) if summary else 'No summary available'
+        summary_div = page_detail_soup.find('div', class_='eds-text--left')
+        event_summary = ''
+        if summary_div:
+            p_elements = summary_div.find_all('p')
+            summary_texts = [p_element.get_text(separator=' ',strip=True) for p_element in p_elements]
+            event_summary = ' '.join(summary_texts)
+        elif not summary_div:
+            summary = page_detail_soup.find('p', class_='summary')
+            event_summary = summary.get_text(strip=True) if summary else 'No summary available'
 
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
@@ -282,7 +289,7 @@ def scrape_eventbrite_top_events(country, day, location, category_slug, page_num
         location_div = page_detail_soup.find('div', class_='location-info__address')
          # Code with help from Co-Pilot
         if location_div:
-            event_location = location_div.get_text(strip=True)
+            event_location = location_div.get_text(separator=' ', strip=True)
             event_location= re.sub(r'Show map$', '', event_location)
         else:
             event_location = 'No location available'
@@ -290,11 +297,15 @@ def scrape_eventbrite_top_events(country, day, location, category_slug, page_num
         # even if its preceeded by another word, the issue was "United KingdomShow map"
         
         summary_div = page_detail_soup.find('div', class_='eds-text--left')
-        event_summary = 'No summary available'
+        event_summary = ''
         if summary_div:
-            p_element = summary_div.find('p')
-            if p_element:
-                event_summary = p_element.get_text(strip=True)
+            p_elements = summary_div.find_all('p')
+            summary_texts = [p_element.get_text(separator=' ', strip=True) for p_element in p_elements]
+            event_summary = ' '.join(summary_texts)
+        elif not summary_div:
+            summary = page_detail_soup.find('p', class_='summary')
+            event_summary = summary.get_text(strip=True) if summary else 'No summary available'
+                
 
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
@@ -348,7 +359,7 @@ def scrape_eventbrite_top_events_no_category(location, country):
         location_div = page_detail_soup.find('div', class_='location-info__address')
          # Code with help from Co-Pilot
         if location_div:
-            event_location = location_div.get_text(strip=True)
+            event_location = location_div.get_text(separator=' ', strip=True)
             event_location= re.sub(r'Show map$', '', event_location)
         else:
             event_location = 'No location available'
@@ -358,13 +369,16 @@ def scrape_eventbrite_top_events_no_category(location, country):
         price_div = page_detail_soup.find('span', class_="eds-text-bm eds-text-weight--heavy")
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
 
-        summary_div = page_detail_soup.find('div', class_='event-details__main-inner')
-        event_summary = summary_div.get_text(strip=True) if summary_div else 'No summary available'
-        
+        summary_div = page_detail_soup.find('div', class_='eds-text--left')
+        event_summary = ''
         if summary_div:
-            p_element = summary_div.find('p')
-            if p_element:
-                event_summary = p_element.get_text(strip=True)
+            p_elements = summary_div.find_all('p')
+            summary_texts = [p_element.get_text(separator=' ', strip=True) for p_element in p_elements]
+            event_summary = ' '.join(summary_texts)
+        elif not summary_div:
+            summary = page_detail_soup.find('p', class_='summary')
+            event_summary = summary.get_text(strip=True) if summary else 'No summary available'
+
 
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
@@ -585,8 +599,11 @@ def compare_events(events):
         plt.close()
         print(f'Event dates over time saved as {image_path}')
     elif choice == '7':
-        print('something')
-        
+        user_location = input('Enter your location: ')
+        user_coordinates = get_coordinates(user_location)
+        if not user_coordinates:
+            print('Location cannot be found.')
+            
     else:
         print('No valid comparison to display.')
      
@@ -814,17 +831,16 @@ def search_top_categories():
 
     def get_user_choice():
         while True:
-            user_input = input(f"Enter the number of your choice, or nothing to search all top events in {location}: ")
-            if user_input == "":
-                return None
+            user_input = input(f"Enter the number of your choice to find events in {location}: ")
             try:
                 choice = int(user_input)
                 if 1 <= choice <= len(categories):
                     return categories[choice - 1]
+                # 1 is subtracted from the choice to get the correct index
                 else:
-                    print(f"Please enter a number between 1 and {len(categories)}.\nOr enter nothing to search for all top categories in your location.")
+                    print(f"Please enter a number between 1 and {len(categories)}.")
             except ValueError:
-                print("Invalid input. Please enter a number or press Enter to search for all top categories.")
+                print("Invalid input. Please enter a number.")
 
     def generate_slug(category):
         category = category.replace('&', 'and')
