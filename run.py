@@ -467,12 +467,12 @@ def compare_events(events):
     print('1. Average price of events')
     print('2. Median price of events')
     print('3. Event count per day')
-    print('3. Event count per month')
-    print('4. Event price distribution')
-    print('5. Event dates over time')
-    print('6. Closest distance events')
-    print('7. Compare organizers')
-    print('8. Main Menu')
+    print('4. Event count per month')
+    print('5. Event price distribution')
+    print('6. Event dates over time')
+    print('7. Closest distance events')
+    print('8. Compare organizers')
+    print('9. Main Menu')
     choice = input('Enter your choice: ').strip()
     
     if choice == '1':
@@ -504,6 +504,30 @@ def compare_events(events):
         # If empty list, return 0
         print(f'\nThe median price of events is: £{result}')
     elif choice == '3':
+        event_days = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%d') for event in events]
+        # List comprehension to extract the day and year from the event_date_time field for each event, the date is expected to be in the format 'YYYY-MM-DD HH:MM:SS' and is parsed to a datetime object.
+        # The second argument formats the datetime object to 'YYYY-DD' to be used to group the events by day
+        days_counts = Counter(event_days)
+        # Use the Counter class to count the occurrences of each day, works by setting a dictionary key with each collected day and incrementing the value each time the day is found
+        days, counts = zip(*sorted(days_counts.items()))
+        # Take the dictionary days_counts and retrieve its items as a list of tuples with items(), then sort the tuples by the keys (days) sorted(), take the sorted list of tuples and unpacks them into two lists, one for keys and one for values zip(*).
+        # the splat operator * allowed zip() to take the list of tuples and unpack them into two seperate lists, without it zip() would return one list of tuples
+        plt.bar(days, counts)
+        # Create a bar chart with the days on the x-axis and the counts on the y-axis
+        plt.title('Events By Day')
+        plt.xlabel
+        plt.ylabel('Number of Events')
+        plt.xticks(rotation=45)
+        # Rotate the x-axis labels by 45 degrees for better readability
+        plt.tight_layout()
+        # Automatic padding
+        image_path = 'data_visuals/event_price_distribution.png'
+        plt.savefig(image_path)
+        # Save the plot as an image
+        plt.close()
+        # I decided to use the matplotlib library to create various data visualizations
+        print(f'Event count per day saved as {image_path}')
+    elif choice == '4':
         event_months = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m') for event in events]
         # List comprehension to extract the month and year from the event_date_time field for each event, the date is expected to be in the format 'YYYY-MM-DD HH:MM:SS' and is parsed to a datetime object.
         # The second argument formats the datetime object to 'YYYY-MM' to be used to group the events by month
@@ -527,8 +551,44 @@ def compare_events(events):
         plt.close()
         # I decided to use the matplotlib library to create various data visualizations
         print(f'Event count per month saved as {image_path}')
-    elif choice == '4':
+    elif choice == '5':
+        price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
+        # List comprehension to extract the prices from the events, not including 'sold out', 'free', and 'donation' events, then calling the extract_price function to extract the numeric part of the price
+        plt.hist(price, bins=20, edgecolor='black')
+        # A bin is a range of values that is used to group the data, the bins argument specifies the number of bins to use, the edgecolor argument specifies the color of the edges of the bars
+        plt.title('Event Price Distribution')
+        plt.xlabel('Price (£)')
+        plt.ylabel('Frequency')
+        image_path = 'data_visuals/event_price_distribution.png'
+        plt.savefig(image_path)
+        plt.close()
+        print(f'Event price distribution saved as {image_path}')
+    elif choice == '6':
+        event_dates = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').date() for event in events]
+        # Grab all the event dates from the event_date_time field, parse the date and time to a datetime object, then extract the date
+        date_counts = Counter(event_dates)
+        # Count each occurrence of the different dates
+        dates, counts = zip(*sorted(date_counts.items()))
+        # Sort the dates and counts, then unpack them into two lists, it works by taking the date_counts Counter dictionary with items() which returns the key-value pairs as a list of tuples,
+        # then sorted() sorts the tuples by the keys (dates), then zip() takes the sorted list of tuples and unpacks them into two seperate lists using the splat operator *
+        plt.plot(dates, counts)
+        # Create a line plot with the dates on the x-axis and the counts on the y-axis
+        plt.title('Events Over Time')
+        plt.xlabel('Date')
+        plt.ylabel('Number of Events')
+        plt.xticks(rotation=45)
+        # Rotate the labels on the x-axis by 45 degrees for better readability
+        plt.tight_layout()
+        # Add padding to the plot
+        image_path = 'data_visuals/event_price_distribution.png'
+        plt.savefig(image_path)
+        plt.close()
+        print(f'Event dates over time saved as {image_path}')
+    elif choice == '7':
         print('something')
+        
+    else:
+        print('No valid comparison to display.')
      
         
 
