@@ -36,8 +36,8 @@ def index():
     files = os.listdir(app.config['UPLOAD_FOLDER'])
     file_links = ''.join([f'<li><a href="/download/{file}">{file}</a></li>' for file in files])
     return f'''
-        <h1>Welcome to the Event Exporter!</h1>
-        <ul>{file_links}</ul>
+        <h1 style='text-align:center;'>Welcome to the Event Exporter!</h1>
+        <ul style='text-align:center;'>{file_links}</ul>
         
     '''
 
@@ -47,7 +47,8 @@ def download_file(filename):
 
 
 def start_flask_server():
-    app.run(debug=True)
+    print('Flask server started. Press CNTRL-C to quit exporting.')
+    app.run(debug=False)
 
 class Spinner:
     def __init__(self, message='Loading...'):
@@ -244,14 +245,16 @@ def scrape_eventbrite_events(location, day, product, page_number, start_date, en
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
         
         location_div = page_detail_soup.find('div', class_='location-info__address')
-        # Code with help from Co-Pilot
         if location_div:
             event_location = location_div.get_text(separator=' ', strip=True)
+            # Code with help from Co-Pilot
             event_location= re.sub(r'Show map$', '', event_location)
+            # End of Co-Pilot code, this code removes the 'Show map' text from the location
+            # even if its preceeded by another word, the issue was "United KingdomShow map"
         else:
-            event_location = 'No location available'
-        # End of Co-Pilot code, this code removes the 'Show map' text from the location
-        # even if its preceeded by another word, the issue was "United KingdomShow map"
+            location_div = page_detail_soup.find('div', class_='location-info__address-text')
+            if location_div:
+                event_location = location_div.get_text(separator=' ', strip=True)
 
         summary_div = page_detail_soup.find('div', class_='eds-text--left')
         event_summary = ''
@@ -317,14 +320,16 @@ def scrape_eventbrite_top_events(country, day, location, category_slug, page_num
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
 
         location_div = page_detail_soup.find('div', class_='location-info__address')
-         # Code with help from Co-Pilot
         if location_div:
             event_location = location_div.get_text(separator=' ', strip=True)
+            # Code with help from Co-Pilot
             event_location= re.sub(r'Show map$', '', event_location)
+            # End of Co-Pilot code, this code removes the 'Show map' text from the location
+            # even if its preceeded by another word, the issue was "United KingdomShow map"
         else:
-            event_location = 'No location available'
-        # End of Co-Pilot code, this code removes the 'Show map' text from the location
-        # even if its preceeded by another word, the issue was "United KingdomShow map"
+            location_div = page_detail_soup.find('div', class_='location-info__address-text')
+            if location_div:
+                event_location = location_div.get_text(separator=' ', strip=True)
         
         summary_div = page_detail_soup.find('div', class_='eds-text--left')
         event_summary = ''
@@ -387,14 +392,16 @@ def scrape_eventbrite_top_events_no_category(location, country):
         page_detail_soup = BeautifulSoup(page_detail.content, 'html.parser')
         
         location_div = page_detail_soup.find('div', class_='location-info__address')
-         # Code with help from Co-Pilot
         if location_div:
             event_location = location_div.get_text(separator=' ', strip=True)
+            # Code with help from Co-Pilot
             event_location= re.sub(r'Show map$', '', event_location)
+            # End of Co-Pilot code, this code removes the 'Show map' text from the location
+            # even if its preceeded by another word, the issue was "United KingdomShow map"
         else:
-            event_location = 'No location available'
-        # End of Co-Pilot code, this code removes the 'Show map' text from the location
-        # even if its preceeded by another word, the issue was "United KingdomShow map"
+            location_div = page_detail_soup.find('div', class_='location-info__address-text')
+            if location_div:
+                event_location = location_div.get_text(separator=' ', strip=True)
         
         price_div = page_detail_soup.find('span', class_="eds-text-bm eds-text-weight--heavy")
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
@@ -446,18 +453,35 @@ def save_to_csv(events):
             # it works by creating a new dictionary with only the fields that are in the fields list
             writer.writerow(filtered_event)
 
-    print(f"Events saved to {file_name}")
+    print(f"\n-------------------------------------\nEvents saved to {file_name}, download/view from the main menu.\n-------------------------------------")
     return
 
 def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
+    
+    filename = check_file_unique(filename)
+    
     workbook = openpyxl.Workbook()
+    # Create a new Excel workbook
     sheet = workbook.active
+    # active means the first sheet in the workbook
     sheet.title = 'Events Data'
+    # Set the title of the sheet to 'Events Data'
     
     headers = ['Event Name', 'Date', 'Location', 'Price', 'Summary', 'URL']
-    for col_num, header in enumerate(headers, 1):
+    column_widths = [71, 58, 111, 12, 81, 140]
+    # Set the column headers and their widths
+    
+    for col_num, (header, width) in enumerate(zip(headers, column_widths), 1):
+        # zip() pairs each element from headers with the corresponding element from column_widths,
+        # this creates an iterator of tuples where each tuple contains a header and its width
+        # enumerate() numerates each iteration of the tuples list, starting at 1, giving the column number
+        # Result: [(1, ('Event Name', 71)), (2, ('Date', 58)), (3, ('Location', 111)) etc.]
         col_letter = get_column_letter(col_num)
+        # get_column_letter() is a built in function from openpyxl that returns the letter of the specified column, example: 1 -> 'A', 2 -> 'B'
         sheet[f'{col_letter}1'] = header
+        # Will set the headers stated above in the first row of the sheet iterating through columns A, B, C, D, E, F 
+        sheet.column_dimensions[col_letter].width = width
+        # column_dimensions is a dictionary that stores the width of each column, the width is set to the width in the column_widths list
         
     for row_num, event in enumerate(events, 2):
         sheet[f'A{row_num}'] = event.get('name', 'N/A')
@@ -468,7 +492,7 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
         sheet[f'F{row_num}'] = event.get('url', 'N/A')
     
     workbook.save(filename)
-    print(f"-------------------------------------\nEvents saved to {filename}\n-------------------------------------")
+    print(f"\n-------------------------------------\nEvents saved to {filename}, download/view from the main menu.\n-------------------------------------")
 
 def collection_menu():
     while True:
@@ -643,7 +667,7 @@ def compare_events(events):
         # Save the plot as an image
         plt.close()
         # I decided to use the matplotlib library to create various data visualizations
-        print(f'Event count per day saved as {image_path}')
+        print(f'\n-------------------------------------\nEvent count per day saved as {image_path}, download/view from the main menu.\n-------------------------------------')
     elif choice == '4':
         event_months = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m') for event in events]
         # List comprehension to extract the month and year from the event_date_time field for each event, the date is expected to be in the format 'YYYY-MM-DD HH:MM:SS' and is parsed to a datetime object.
@@ -668,7 +692,7 @@ def compare_events(events):
         # Save the plot as an image
         plt.close()
         # I decided to use the matplotlib library to create various data visualizations
-        print(f'Event count per month saved as {image_path}')
+        print(f'\n-------------------------------------\nEvent count per month saved as {image_path}, download/view from the main menu.\n-------------------------------------')
     elif choice == '5':
         price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
         # List comprehension to extract the prices from the events, not including 'sold out', 'free', and 'donation' events, then calling the extract_price function to extract the numeric part of the price
@@ -681,7 +705,7 @@ def compare_events(events):
         image_path = check_file_unique(image_path)
         plt.savefig(image_path)
         plt.close()
-        print(f'Event price distribution saved as {image_path}')
+        print(f'\n-------------------------------------\nEvent price distribution saved as {image_path}, download/view from the main menu.\n-------------------------------------')
     elif choice == '6':
         event_dates = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').date() for event in events]
         # Grab all the event dates from the event_date_time field, parse the date and time to a datetime object, then extract the date
@@ -703,7 +727,7 @@ def compare_events(events):
         image_path = check_file_unique(image_path)
         plt.savefig(image_path)
         plt.close()
-        print(f'Event dates over time saved as {image_path}')
+        print(f'\n-------------------------------------\nEvent dates over time saved as {image_path}, download/view from the main menu.\n-------------------------------------')
     elif choice == '7':
         print('Not implemented yet.')
     else:
@@ -852,11 +876,10 @@ def display_events(events, start_index, end_index, user_selection, search_key):
     collected_events = events[start_index:end_index]
     for data in collected_events:
         if isinstance(data, dict):
-            location = data.get('location', 'No location available')
             show_date_time = data.get('show_date_time', 'No date and time available')
             summary = data['summary']
             truncated_summary = summary[:120] + '...' if len(summary) > 120 else summary
-            if location != 'No location available' and show_date_time != 'No date and time available':
+            if show_date_time != 'No date and time available':
                 print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\n{data["show_date_time"]}\nPrice: {data["event_price"]}\nSummary: {truncated_summary}\nURL: {data["url"]}')
             else:
                 continue # Skip invalid event data
@@ -1060,7 +1083,7 @@ def main():
     welcome = 0
     while True:
         if welcome < 1:
-            print("-------------------------------------\nWelcome to Event Hoarder!\nSearch for events and they will be automatically be saved to a database so you can\nperform sorting or comparing tasks, also print to CSV\n-------------------------------------")
+            print("-------------------------------------\nWelcome to Event Hoarder!\nSearch for events and they will be automatically be saved to a database so you can\nperform sorting, comparing or filtering tasks, also print to CSV\n-------------------------------------")
             welcome += 1
         print("\nChoose an option:")
         print("1. Quick Search & Collect")
