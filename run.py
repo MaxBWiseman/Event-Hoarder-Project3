@@ -11,14 +11,43 @@ import time
 import re
 import math
 import matplotlib.pyplot as plt
+import openpyxl
+from openpyxl.utils import get_column_letter
 from datetime import datetime
 from dateutil import parser
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from geopy.distance import geodesic
 from dotenv import load_dotenv
+from flask import Flask, send_from_directory
+
+app = Flask(__name__)
 
 load_dotenv()
+
+#Directory to save Excel and CSV files
+UPLOAD_FOLDER = 'data_visuals'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+@app.route('/')
+def index():
+    files = os.listdir(app.config['UPLOAD_FOLDER'])
+    file_links = ''.join([f'<li><a href="/download/{file}">{file}</a></li>' for file in files])
+    return f'''
+        <h1>Welcome to the Event Exporter!</h1>
+        <ul>{file_links}</ul>
+        
+    '''
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+def start_flask_server():
+    app.run(debug=True)
 
 class Spinner:
     def __init__(self, message='Loading...'):
@@ -398,10 +427,7 @@ def scrape_eventbrite_top_events_no_category(location, country):
     return event_data
 
 def save_to_csv(events):
-    directory = 'static'
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    
+    directory = 'data_visuals'
     file_name = os.path.join(directory, 'collected_events.csv')
     file_exists = os.path.exists(file_name)
     
@@ -422,6 +448,27 @@ def save_to_csv(events):
 
     print(f"Events saved to {file_name}")
     return
+
+def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = 'Events Data'
+    
+    headers = ['Event Name', 'Date', 'Location', 'Price', 'Summary', 'URL']
+    for col_num, header in enumerate(headers, 1):
+        col_letter = get_column_letter(col_num)
+        sheet[f'{col_letter}1'] = header
+        
+    for row_num, event in enumerate(events, 2):
+        sheet[f'A{row_num}'] = event.get('name', 'N/A')
+        sheet[f'B{row_num}'] = event.get('show_date_time', 'N/A')
+        sheet[f'C{row_num}'] = event.get('location', 'N/A')
+        sheet[f'D{row_num}'] = event.get('event_price', 'N/A')
+        sheet[f'E{row_num}'] = event.get('summary', 'N/A')
+        sheet[f'F{row_num}'] = event.get('url', 'N/A')
+    
+    workbook.save(filename)
+    print(f"-------------------------------------\nEvents saved to {filename}\n-------------------------------------")
 
 def collection_menu():
     while True:
@@ -473,6 +520,19 @@ If a number is found, it is converted to a float and returned. If no number is f
 The sort_events function uses the extract_price function to extract the numeric part of the event_price before sorting. 
 """
 
+def check_file_unique(image_path):
+    directory, filename = os.path.split(image_path)
+    # Example: 'data_visuals/event_count_per_day.png' -> ('data_visuals', 'event_count_per_day.png')
+    base, ext = os.path.splitext(filename)
+    # Example: 'event_count_per_day.png' -> ('event_count_per_day', '.png')
+    counter = 1
+    
+    while os.path.exists(image_path):
+        image_path = os.path.join(directory, f'{base}_{counter}{ext}')
+        # While theres already a file with the same name, add a counter to the filename
+        counter += 1
+    
+    return image_path
 
 def get_coordinates(location, api_key):
     url = f'https://maps.googleapis.com/maps/api/geocode/json?address={location}&key={api_key}'
@@ -577,7 +637,8 @@ def compare_events(events):
         # Rotate the x-axis labels by 45 degrees for better readability
         plt.tight_layout()
         # Automatic padding
-        image_path = 'data_visuals/event_price_distribution.png'
+        image_path = 'data_visuals/event_count_per_day.png'
+        image_path = check_file_unique(image_path)
         plt.savefig(image_path)
         # Save the plot as an image
         plt.close()
@@ -601,7 +662,8 @@ def compare_events(events):
         # Rotate the x-axis labels by 45 degrees for better readability
         plt.tight_layout()
         # Automatic padding
-        image_path = 'data_visuals/event_price_distribution.png'
+        image_path = 'data_visuals/event_count_per_month.png'
+        image_path = check_file_unique(image_path)
         plt.savefig(image_path)
         # Save the plot as an image
         plt.close()
@@ -616,6 +678,7 @@ def compare_events(events):
         plt.xlabel('Price (£)')
         plt.ylabel('Frequency')
         image_path = 'data_visuals/event_price_distribution.png'
+        image_path = check_file_unique(image_path)
         plt.savefig(image_path)
         plt.close()
         print(f'Event price distribution saved as {image_path}')
@@ -636,7 +699,8 @@ def compare_events(events):
         # Rotate the labels on the x-axis by 45 degrees for better readability
         plt.tight_layout()
         # Add padding to the plot
-        image_path = 'data_visuals/event_price_distribution.png'
+        image_path = 'data_visuals/event_dates_over_time.png'
+        image_path = check_file_unique(image_path)
         plt.savefig(image_path)
         plt.close()
         print(f'Event dates over time saved as {image_path}')
@@ -718,7 +782,7 @@ def event_manipulation_menu(events):
         elif choice == '2':
             compare_events(events)
         elif choice == '3':
-            filter_events(events)
+            filter_events(events) # will be able to choose events based on collected tags
         elif choice == '4':
             print('Returning to the main menu.')
             main()
@@ -744,13 +808,18 @@ def search_events_in_collection():
     
     display_events(all_events, 0, len(all_events), user_selection, search_key=unique_search_keys[int(choice) - 1])
 
-    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV file (C) or perform tasks? (T): ').strip().lower()
-    if save_choice == 'y':
+    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV or Excel file? (C/E) or perform tasks on the data? (T): ').strip().lower()
+    if save_choice == 'c':
         try:
             save_to_csv(all_events)
         except Exception as e:
             print(f"Error saving events to CSV: {e}")
-    else:
+    elif save_choice == 'e':
+        try:
+            save_to_excel(all_events)
+        except Exception as e:
+            print(f"Error saving events to Excel: {e}")
+    elif save_choice == 't':
         event_manipulation_menu(all_events)
 
 
@@ -763,13 +832,18 @@ def view_all_events():
     
     result = display_events(all_events, 0, len(all_events), user_selection, search_key='None')
     
-    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV file (C) or perform tasks? (T): ').strip().lower()
-    if save_choice == 'y':
+    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV or Excel file? (C/E) or perform tasks on the data? (T): ').strip().lower()
+    if save_choice == 'c':
         try:
             save_to_csv(all_events)
         except Exception as e:
             print(f"Error saving events to CSV: {e}")
-    else:
+    elif save_choice == 'e':
+        try:
+            save_to_excel(all_events)
+        except Exception as e:
+            print(f"Error saving events to Excel: {e}")
+    elif save_choice == 't':
         event_manipulation_menu(all_events)
         
     
@@ -783,7 +857,7 @@ def display_events(events, start_index, end_index, user_selection, search_key):
             summary = data['summary']
             truncated_summary = summary[:120] + '...' if len(summary) > 120 else summary
             if location != 'No location available' and show_date_time != 'No date and time available':
-                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\nDate & Time: {data["show_date_time"]}\nPrice: {data["event_price"]}\nSummary: {truncated_summary}\nURL: {data["url"]}')
+                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\n{data["show_date_time"]}\nPrice: {data["event_price"]}\nSummary: {truncated_summary}\nURL: {data["url"]}')
             else:
                 continue # Skip invalid event data
         else:
@@ -986,14 +1060,15 @@ def main():
     welcome = 0
     while True:
         if welcome < 1:
-            print("-------------------------------------\nWelcome to Event Hoarder!\nSearch for events and they will be automatically be saved to a database to\nbe used for printing to CSV or performing data manipulation tasks\n-------------------------------------")
+            print("-------------------------------------\nWelcome to Event Hoarder!\nSearch for events and they will be automatically be saved to a database so you can\nperform sorting or comparing tasks, also print to CSV\n-------------------------------------")
             welcome += 1
         print("\nChoose an option:")
         print("1. Quick Search & Collect")
         print("2. Search & Collect Top Events")
         print("3. Search & Collect Top Categories")
         print("4. View Collected Events")
-        print("5. Exit")
+        print("5. Download saved Excel , CSV or data visuals")
+        print("6. Exit")
         print("#. Clear Database")
         choice = input("Enter your choice: ").strip()
 
@@ -1004,8 +1079,10 @@ def main():
         elif choice == '3':
             search_top_categories()
         elif choice == '4':
-            collection_menu()    
-        elif choice == '5':
+            collection_menu()
+        elif choice =='5':
+            start_flask_server()    
+        elif choice == '6':
             print("-------------------------------------\nExiting the program\n-------------------------------------.")
             sys.exit()
         elif choice == '#':
