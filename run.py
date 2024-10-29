@@ -134,7 +134,10 @@ def save_to_mongodb(collection, search_key, events):
             'event_date_time': event.get('event_date_time', 'N/A'),
             'show_date_time': event.get('show_date_time', 'N/A'),
             'summary': event.get('summary', 'N/A'),
-            'event_price': event.get('event_price', 'N/A')
+            'event_price': event.get('event_price', 'N/A'),
+            'event_organiser_name': event.get('event_organiser_name', 'N/A'),
+            'event_organiser_followers': event.get('event_organiser_followers', 'N/A'),
+            'event_organiser_link': event.get('event_organiser_link', 'N/A'),
         }
         
         collection.update_one({'url': unique_id}, {'$set': event_data}, upsert=True)
@@ -268,7 +271,24 @@ def scrape_eventbrite_events(location, day, product, page_number, start_date, en
 
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
-
+        
+        event_organiser_name = 'No organiser available'
+        event_organiser_followers = 'No followers available'
+        event_organiser_link = None
+        
+        event_organiser_divs = page_detail_soup.find_all('div', class_='descriptive-organizer-info-heading-signal-container')
+       
+        for div in event_organiser_divs:
+            organiser_link = div.find('a', class_='descriptive-organizer-info-mobile__name-link')
+            if organiser_link:
+                event_organiser_name = organiser_link.get_text(strip=True)
+                event_organiser_link = organiser_link['href']
+                
+            organiser_followers_div = div.find('span', class_='followers-count')
+            if organiser_followers_div:
+                event_organiser_followers_span = organiser_followers_div.find('span', class_='organizer-stats__highlight')
+                event_organiser_followers = event_organiser_followers_span.get_text(strip=True)
+        
         date_parsed = parsed_scraped_date(event_date_time)
         
         tags = page_detail_soup.find_all('a', class_='tags-link')
@@ -280,7 +300,10 @@ def scrape_eventbrite_events(location, day, product, page_number, start_date, en
             'show_date_time': event_date_time, # More clearer user version of the date
             'event_date_time': date_parsed,
             'summary': event_summary,
-            'event_price': event_price
+            'event_price': event_price,
+            'event_organiser_name': event_organiser_name,
+            'event_organiser_followers': event_organiser_followers,
+            'event_organiser_link': event_organiser_link,
         })
 
         event_data.append(event_info)
@@ -345,6 +368,22 @@ def scrape_eventbrite_top_events(country, day, location, category_slug, page_num
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
 
+        event_organiser_name = 'No organiser available'
+        event_organiser_followers = 'No followers available'
+        event_organiser_link = None
+        
+        event_organiser_divs = page_detail_soup.find_all('div', class_='descriptive-organizer-info-heading-signal-container')
+       
+        for div in event_organiser_divs:
+            organiser_link = div.find('a', class_='descriptive-organizer-info-mobile__name-link')
+            if organiser_link:
+                event_organiser_name = organiser_link.get_text(strip=True)
+                event_organiser_link = organiser_link['href']
+                
+            organiser_followers_div = div.find('span', class_='followers-count')
+            if organiser_followers_div:
+                event_organiser_followers_span = organiser_followers_div.find('span', class_='organizer-stats__highlight')
+                event_organiser_followers = event_organiser_followers_span.get_text(strip=True)
         date_parsed = parsed_scraped_date(event_date_time)
         
         tags = page_detail_soup.find_all('a', class_='tags-link')
@@ -356,7 +395,10 @@ def scrape_eventbrite_top_events(country, day, location, category_slug, page_num
             'show_date_time': event_date_time,
             'event_date_time': date_parsed,
             'summary': event_summary,
-            'event_price': event_price
+            'event_price': event_price,
+            'event_organiser_name': event_organiser_name,
+            'event_organiser_followers': event_organiser_followers,
+            'event_organiser_link': event_organiser_link,
         })
 
         event_data.append(event_info)
@@ -420,6 +462,23 @@ def scrape_eventbrite_top_events_no_category(location, country):
         date_time = page_detail_soup.find('span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
 
+        event_organiser_name = 'No organiser available'
+        event_organiser_followers = 'No followers available'
+        event_organiser_link = None
+        
+        event_organiser_divs = page_detail_soup.find_all('div', class_='descriptive-organizer-info-heading-signal-container')
+       
+        for div in event_organiser_divs:
+            organiser_link = div.find('a', class_='descriptive-organizer-info-mobile__name-link')
+            if organiser_link:
+                event_organiser_name = organiser_link.get_text(strip=True)
+                event_organiser_link = organiser_link['href']
+                
+            organiser_followers_div = div.find('span', class_='followers-count')
+            if organiser_followers_div:
+                event_organiser_followers_span = organiser_followers_div.find('span', class_='organizer-stats__highlight')
+                event_organiser_followers = event_organiser_followers_span.get_text(strip=True)
+        
         date_parsed = parsed_scraped_date(event_date_time)
         
         event_info.update({
@@ -427,7 +486,10 @@ def scrape_eventbrite_top_events_no_category(location, country):
             'show_date_time': event_date_time,
             'event_date_time': date_parsed,
             'summary': event_summary,
-            'event_price': event_price
+            'event_price': event_price,
+            'event_organiser_name': event_organiser_name,
+            'event_organiser_followers': event_organiser_followers,
+            'event_organiser_link': event_organiser_link,
         })
 
         event_data.append(event_info)
@@ -438,7 +500,7 @@ def save_to_csv(events):
     file_name = os.path.join(directory, 'collected_events.csv')
     file_exists = os.path.exists(file_name)
     
-    fields = ['name', 'location', 'show_date_time', 'event_price', 'summary', 'url']
+    fields = ['name', 'location', 'show_date_time', 'event_price', 'summary', 'url', 'event_organiser_name', 'event_organiser_followers', 'event_organiser_link']
 
     with open(file_name, 'a', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=fields)
@@ -467,7 +529,7 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
     sheet.title = 'Events Data'
     # Set the title of the sheet to 'Events Data'
     
-    headers = ['Event Name', 'Date', 'Location', 'Price', 'Summary', 'URL']
+    headers = ['Event Name', 'Date', 'Location', 'Price', 'Summary', 'URL', 'Organiser', 'Followers', 'Organiser Link']
     column_widths = [71, 58, 111, 12, 81, 140]
     # Set the column headers and their widths
     
@@ -490,6 +552,9 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
         sheet[f'D{row_num}'] = event.get('event_price', 'N/A')
         sheet[f'E{row_num}'] = event.get('summary', 'N/A')
         sheet[f'F{row_num}'] = event.get('url', 'N/A')
+        sheet[f'G{row_num}'] = event.get('event_organiser_name', 'N/A')
+        sheet[f'H{row_num}'] = event.get('event_organiser_followers', 'N/A')
+        sheet[f'I{row_num}'] = event.get('event_organiser_link', 'N/A')
     
     workbook.save(filename)
     print(f"\n-------------------------------------\nEvents saved to {filename}, download/view from the main menu.\n-------------------------------------")
@@ -611,8 +676,8 @@ def compare_events(events):
     print('4. Event count per month')
     print('5. Event price distribution')
     print('6. Event dates over time')
-    print('8. Compare organizers')
-    print('9. Main Menu')
+    print('7. Compare organizers')
+    print('8. Main Menu')
     choice = input('Enter your choice: ').strip()
     
     if choice == '1':
@@ -730,6 +795,9 @@ def compare_events(events):
         print(f'\n-------------------------------------\nEvent dates over time saved as {image_path}, download/view from the main menu.\n-------------------------------------')
     elif choice == '7':
         print('Not implemented yet.')
+    elif choice =='8':
+        print('Returning to the main menu.')
+        main()
     else:
         print('No valid comparison to display.')
      
@@ -757,7 +825,7 @@ def sort_events(events):
     elif choice == '2':
         cheap_events = [event for event in events if event.get('event_price', '').lower() not in ['sold out', 'free']]
     # Filter out events with event_price of 'free' and 'sold out' with list comprehension, if not found, return an empty list
-        cheap_events_sorted = sorted(cheap_events, key=lambda x: extract_price(x.get('event_price', '0')))
+        cheap_events_sorted = sorted(cheap_events, key=lambda event: extract_price(event.get('event_price', '0')))
     # Sort the remaining events in order based on event_price, the key argument specifies a custom sorting function for the sorted() method, and extracts a comparison key from each element.
     # The lambda function is given as the key argument to the sorted() method, it takes argument x that represents each element in the list, and extracts the price from the event_price field
     # with help from the extract_price function. The sorted() method will sort the events in ascending order based on the extracted price.
@@ -766,7 +834,7 @@ def sort_events(events):
     elif choice == '3':
         paid_events = [event for event in events if event.get('event_price', '').lower() not in ['free', 'donation']]
     # Filter out events with event_price of 'free' and 'donation' with list comprehension, if not found, return an empty list
-        expensive_events_sorted = sorted(paid_events, key=lambda x: extract_price(x.get('event_price', '0')), reverse=True)
+        expensive_events_sorted = sorted(paid_events, key=lambda event: extract_price(event.get('event_price', '0')), reverse=True)
     # Sort the remaining events in reverse order based on event_price, the key argument specifies a custom sorting function for the sorted() method, and extracts a comparison key from each element.
     # The lambda function is given as the key argument to the sorted() method, it takes argument x that represents each element in the list, and extracts the price from the event_price field
     # with help from the extract_price function. The sorted() method will sort the events in decending order based on the extracted price.
@@ -774,10 +842,20 @@ def sort_events(events):
     # Display the sorted events from bottom to top , ::-1 is used to reverse the list
     elif choice == '4':
         current_time = datetime.now()
-        soonest_events = sorted(
-        [event for event in events if event.get('event_date_time') and datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S') > current_time],
-        key=lambda x: datetime.strptime(x.get('event_date_time', ''), '%Y-%m-%d %H:%M:%S')
-        )
+        soonest_events = []
+        for event in events:
+            if event.get('event_date_time'):
+                event_date_time = datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S')
+                # Convert the getted event_date_time string to a datetime object
+                if event_date_time > current_time:
+                    soonest_events.append(event)
+                else:
+                    continue
+                soonest_events.sort(key=lambda event: event['event_date_time'])
+                # lambda function is used as argument for sort(), calling a function on every element in the list, the lambda function takes an event as an argument and returns the event_date_time
+                # the sort() then kicks in and sorts the events based on the event_date_time
+            else:
+                continue
         display_events(soonest_events[::-1], 0, len(soonest_events), 'data-manipulation', 'None')
     elif choice == '5':
         user_location = input('Enter your postcode or specific location: ')
@@ -880,7 +958,7 @@ def display_events(events, start_index, end_index, user_selection, search_key):
             summary = data['summary']
             truncated_summary = summary[:120] + '...' if len(summary) > 120 else summary
             if show_date_time != 'No date and time available':
-                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\n{data["show_date_time"]}\nPrice: {data["event_price"]}\nSummary: {truncated_summary}\nURL: {data["url"]}')
+                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\n{data["show_date_time"]}\nPrice: {data["event_price"]}\nSummary: {truncated_summary}\nURL: {data["url"]}\nOrganiser: {data['event_organiser_name']}\nFollowers: {data["event_organiser_followers"]}\nOrganiser\'s Link: {data["event_organiser_link"]}\n-------------------------------------')
             else:
                 continue # Skip invalid event data
         else:
