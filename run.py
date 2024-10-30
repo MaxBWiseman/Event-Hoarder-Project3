@@ -4,7 +4,9 @@ import requests
 from bs4 import BeautifulSoup
 from collections import Counter
 from datetime import datetime
+from dateutil import parser
 import itertools
+import calendar
 import threading
 import sys
 import time
@@ -193,6 +195,18 @@ def parsed_scraped_date(date_time):
     # Remove any extra spaces and commas
     date_time = ' '.join(date_time.split()).replace(',', '')
     
+    # Identify and correct multiple months in the date_time
+    month_abbrs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    month_count = {month: date_time.count(month) for month in month_abbrs}
+    # Counts the occurrences of each month abbreviation in the date_time
+    months_found = [month for month, count in month_count.items() if count > 0]
+    
+    if len(months_found) > 1:
+        # Replace first month witht he last one specified
+        first_month = months_found[0]
+        last_month = months_found[-1]
+        date_time = date_time.replace(first_month, last_month, 1)
+    
     # For cases where users enter date ranges, only take the first date
     date_time_parts = date_time.split(' ')
     # Only take the first 5 parts of the date_time
@@ -205,11 +219,26 @@ def parsed_scraped_date(date_time):
     try:
         # Use dateutil.parser to parse the date
         dt = parser.parse(date_time, fuzzy=True)
+        # example: 2024-10-19 16:30:00
     except ValueError:
-        raise ValueError(f"Date format not recognized: {date_time}")
     # parser.parse will try to parse the date and time from the string
     # fuzzy=True allows for more flexibility in the date format
-
+        parts = date_time.split()
+        # example ['2024-10-19', '16:30:00']
+        if len(parts) >= 2:
+            try:
+                year, month, day = map(int, parts[0].split('-'))
+                
+                last_valid_day = calendar.monthrange(year, month)[1]
+                
+                if day > last_valid_day:
+                    day = last_valid_day
+                
+                corrected_date = f'{year}-{month}-{day} {parts[1]}'
+                dt = parser.parse(corrected_date, fuzzy=True)
+            except ValueError:
+                return 'N/A'
+                
     # Format the datetime object into the desired format
     formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -273,22 +302,16 @@ def scrape_eventbrite_events(location, day, product, page_number, start_date, en
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
         
         event_organiser_name = 'No organiser available'
-        event_organiser_followers = 'No followers available'
         event_organiser_link = None
         
         event_organiser_divs = page_detail_soup.find_all('div', class_='descriptive-organizer-info-heading-signal-container')
-       
+        
         for div in event_organiser_divs:
             organiser_link = div.find('a', class_='descriptive-organizer-info-mobile__name-link')
             if organiser_link:
                 event_organiser_name = organiser_link.get_text(strip=True)
                 event_organiser_link = organiser_link['href']
-                
-            organiser_followers_div = div.find('span', class_='followers-count')
-            if organiser_followers_div:
-                event_organiser_followers_span = organiser_followers_div.find('span', class_='organizer-stats__highlight')
-                event_organiser_followers = event_organiser_followers_span.get_text(strip=True)
-        
+    
         date_parsed = parsed_scraped_date(event_date_time)
         
         tags = page_detail_soup.find_all('a', class_='tags-link')
@@ -302,7 +325,6 @@ def scrape_eventbrite_events(location, day, product, page_number, start_date, en
             'summary': event_summary,
             'event_price': event_price,
             'event_organiser_name': event_organiser_name,
-            'event_organiser_followers': event_organiser_followers,
             'event_organiser_link': event_organiser_link,
         })
 
@@ -312,7 +334,7 @@ def scrape_eventbrite_events(location, day, product, page_number, start_date, en
 
 
 # FIXME: Scrape top events seems to only scrape about half the events on the top results page for the given area, must look into this
-def scrape_eventbrite_top_events(country, day, location, category_slug, page_number, start_date, end_date):
+def scrape_eventbrite_top_events(country, location, category_slug, day, page_number, start_date, end_date):
     url = f'https://www.eventbrite.co.uk/d/{country}--{location}/{category_slug}--events--{day}/?page={page_number}&start_date={start_date}&end_date={end_date}'
     
     page = requests.get(url)
@@ -369,7 +391,6 @@ def scrape_eventbrite_top_events(country, day, location, category_slug, page_num
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
 
         event_organiser_name = 'No organiser available'
-        event_organiser_followers = 'No followers available'
         event_organiser_link = None
         
         event_organiser_divs = page_detail_soup.find_all('div', class_='descriptive-organizer-info-heading-signal-container')
@@ -380,10 +401,6 @@ def scrape_eventbrite_top_events(country, day, location, category_slug, page_num
                 event_organiser_name = organiser_link.get_text(strip=True)
                 event_organiser_link = organiser_link['href']
                 
-            organiser_followers_div = div.find('span', class_='followers-count')
-            if organiser_followers_div:
-                event_organiser_followers_span = organiser_followers_div.find('span', class_='organizer-stats__highlight')
-                event_organiser_followers = event_organiser_followers_span.get_text(strip=True)
         date_parsed = parsed_scraped_date(event_date_time)
         
         tags = page_detail_soup.find_all('a', class_='tags-link')
@@ -397,7 +414,6 @@ def scrape_eventbrite_top_events(country, day, location, category_slug, page_num
             'summary': event_summary,
             'event_price': event_price,
             'event_organiser_name': event_organiser_name,
-            'event_organiser_followers': event_organiser_followers,
             'event_organiser_link': event_organiser_link,
         })
 
@@ -463,7 +479,6 @@ def scrape_eventbrite_top_events_no_category(location, country):
         event_date_time = date_time.get_text(strip=True) if date_time else 'No date and time available'
 
         event_organiser_name = 'No organiser available'
-        event_organiser_followers = 'No followers available'
         event_organiser_link = None
         
         event_organiser_divs = page_detail_soup.find_all('div', class_='descriptive-organizer-info-heading-signal-container')
@@ -473,12 +488,7 @@ def scrape_eventbrite_top_events_no_category(location, country):
             if organiser_link:
                 event_organiser_name = organiser_link.get_text(strip=True)
                 event_organiser_link = organiser_link['href']
-                
-            organiser_followers_div = div.find('span', class_='followers-count')
-            if organiser_followers_div:
-                event_organiser_followers_span = organiser_followers_div.find('span', class_='organizer-stats__highlight')
-                event_organiser_followers = event_organiser_followers_span.get_text(strip=True)
-        
+
         date_parsed = parsed_scraped_date(event_date_time)
         
         event_info.update({
@@ -488,7 +498,6 @@ def scrape_eventbrite_top_events_no_category(location, country):
             'summary': event_summary,
             'event_price': event_price,
             'event_organiser_name': event_organiser_name,
-            'event_organiser_followers': event_organiser_followers,
             'event_organiser_link': event_organiser_link,
         })
 
@@ -500,7 +509,7 @@ def save_to_csv(events):
     file_name = os.path.join(directory, 'collected_events.csv')
     file_exists = os.path.exists(file_name)
     
-    fields = ['name', 'location', 'show_date_time', 'event_price', 'summary', 'url', 'event_organiser_name', 'event_organiser_followers', 'event_organiser_link']
+    fields = ['name', 'location', 'show_date_time', 'event_price', 'summary', 'url', 'event_organiser_name', 'event_organiser_link']
 
     with open(file_name, 'a', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=fields)
@@ -553,7 +562,6 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
         sheet[f'E{row_num}'] = event.get('summary', 'N/A')
         sheet[f'F{row_num}'] = event.get('url', 'N/A')
         sheet[f'G{row_num}'] = event.get('event_organiser_name', 'N/A')
-        sheet[f'H{row_num}'] = event.get('event_organiser_followers', 'N/A')
         sheet[f'I{row_num}'] = event.get('event_organiser_link', 'N/A')
     
     workbook.save(filename)
@@ -676,7 +684,6 @@ def compare_events(events):
     print('4. Event count per month')
     print('5. Event price distribution')
     print('6. Event dates over time')
-    print('7. Compare organizers')
     print('8. Main Menu')
     choice = input('Enter your choice: ').strip()
     
@@ -793,8 +800,6 @@ def compare_events(events):
         plt.savefig(image_path)
         plt.close()
         print(f'\n-------------------------------------\nEvent dates over time saved as {image_path}, download/view from the main menu.\n-------------------------------------')
-    elif choice == '7':
-        print('Not implemented yet.')
     elif choice =='8':
         print('Returning to the main menu.')
         main()
@@ -958,7 +963,7 @@ def display_events(events, start_index, end_index, user_selection, search_key):
             summary = data['summary']
             truncated_summary = summary[:120] + '...' if len(summary) > 120 else summary
             if show_date_time != 'No date and time available':
-                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\n{data["show_date_time"]}\nPrice: {data["event_price"]}\nSummary: {truncated_summary}\nURL: {data["url"]}\nOrganiser: {data['event_organiser_name']}\nFollowers: {data["event_organiser_followers"]}\nOrganiser\'s Link: {data["event_organiser_link"]}\n-------------------------------------')
+                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\n{data["show_date_time"]}\nPrice: {data["event_price"]}\nSummary: {truncated_summary}\nURL: {data["url"]}\nOrganiser: {data['event_organiser_name']}\nMore Events from Organiser: {data["event_organiser_link"]}\n-------------------------------------')
             else:
                 continue # Skip invalid event data
         else:
@@ -981,6 +986,7 @@ def search_events():
     start_date = ''
     end_date = ''
     day = ''
+    page_number = 1
     
     if date_choice == 'y':
         print('Please enter an option: ')
@@ -1007,7 +1013,6 @@ def search_events():
     spinner.start()
 
     unique_events = []
-    page_number = 1
 
     try:
         # Check if the search term is in the cache
@@ -1019,13 +1024,13 @@ def search_events():
             spinner.stop()
             spinner = Spinner("Scraping new events...")
             spinner.start()
-            events_data, tags_counter = scrape_eventbrite_events(location, day, product, page_number, start_date, end_date)
+            events_data = scrape_eventbrite_events(location, day, product, page_number, start_date, end_date)
             unique_events.extend(events_data)
             cache[search_key] = unique_events
     finally:
         spinner.stop()
 
-    result = display_paginated_events(unique_events, search_key, user_selection, location, product, page_number)
+    result = display_paginated_events(unique_events, search_key, user_selection, location, product, page_number, start_date, end_date)
     
     if result == 'new_search':
         main()
@@ -1194,7 +1199,7 @@ def main():
             print("\nInvalid choice. Please try again.")
 
 
-def display_paginated_events(unique_events, search_key, user_selection, location=None, country=None, category_slug=None, product=None, page_number=1):
+def display_paginated_events(unique_events, search_key, user_selection, location=None, country=None, category_slug=None, product=None, page_number=1, day='' , start_date='', end_date=''):
     page_size = 5
     total_events = len(unique_events)
     current_page = 0
@@ -1207,14 +1212,14 @@ def display_paginated_events(unique_events, search_key, user_selection, location
         
         if end_index >= total_events:
             # Fetch more events if available
-            page_number += 1
+            page_number = int(page_number) + 1
             spinner = Spinner("Fetching more events...")
             spinner.start()
             try:
                 if user_selection == 'eventbrite':
-                    events_data, new_tags_counter = scrape_eventbrite_events(location, product, page_number)
+                    events_data, new_tags_counter = scrape_eventbrite_events(location, day, product, page_number, start_date, end_date)
                 elif user_selection == 'eventbrite_top':
-                    events_data, new_tags_counter, event_count = scrape_eventbrite_top_events(country, location, category_slug, page_number)
+                    events_data, new_tags_counter = scrape_eventbrite_top_events(country, location, category_slug, day, page_number, start_date, end_date)
                 else:
                     break  # No more events to fetch
 
