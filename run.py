@@ -121,27 +121,93 @@ def check_and_delete_old_events():
 check_and_delete_old_events()
 
 def save_to_mongodb(collection, search_key, collected_events):
-   
     for event in collected_events:
-        unique_id = event.get('url', 'N/A')
-        if unique_id == 'N/A':
-            continue
-        
-        event_data = {
-            'search_key': search_key,
-            'url': unique_id,
-            'name': event.get('name', 'N/A'),
-            'location': event.get('location', 'N/A'),
-            'event_date_time': event.get('event_date_time', 'N/A'),
-            'show_date_time': event.get('show_date_time', 'N/A'),
-            'summary': event.get('summary', 'N/A'),
-            'event_price': event.get('event_price', 'N/A'),
-            'event_organiser_name': event.get('event_organiser_name', 'N/A'),
-            'event_organiser_link': event.get('event_organiser_link', 'N/A'),
-        }
-        
-        collection.update_one({'url': unique_id}, {'$set': event_data}, upsert=True)
+        if isinstance(event, dict):
+            unique_id = event.get('url', 'N/A')
+            if unique_id == 'N/A':
+                continue
+            
+            event_data = {
+                'search_key': search_key,
+                'url': unique_id,
+                'name': event.get('name', 'N/A'),
+                'location': event.get('location', 'N/A'),
+                'event_date_time': event.get('event_date_time', 'N/A'),
+                'show_date_time': event.get('show_date_time', 'N/A'),
+                'summary': event.get('summary', 'N/A'),
+                'event_price': event.get('event_price', 'N/A'),
+                'event_organiser_name': event.get('event_organiser_name', 'N/A'),
+                'event_organiser_link': event.get('event_organiser_link', 'N/A'),
+            }
+            
+            collection.update_one({'url': unique_id}, {'$set': event_data}, upsert=True)
+        else:
+            print(f"Skipping invalid event: {event}")
 
+
+def save_to_csv(events):
+    directory = 'data_visuals'
+    file_name = os.path.join(directory, 'collected_events.csv')
+    file_exists = os.path.exists(file_name)
+    
+    fields = ['name', 'location', 'show_date_time', 'event_price', 'summary', 'url', 'event_organiser_name', 'event_organiser_link']
+
+    with open(file_name, 'a', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=fields)
+
+        if not file_exists:
+            writer.writeheader()
+
+        for event in events:
+            filtered_event = {field: event[field] for field in fields if field in event}
+            # this will only include the fields that are in the fields list above, so that
+            # fields that only have a programmatic purpose are not included in the CSV
+            # it works by creating a new dictionary with only the fields that are in the fields list
+            writer.writerow(filtered_event)
+
+    print(f"\n-------------------------------------\nEvents saved to {file_name}, download/view from the main menu.\n-------------------------------------")
+    return
+
+def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
+    
+    filename = check_file_unique(filename)
+    
+    workbook = openpyxl.Workbook()
+    # Create a new Excel workbook
+    sheet = workbook.active
+    # active means the first sheet in the workbook
+    sheet.title = 'Events Data'
+    # Set the title of the sheet to 'Events Data'
+    
+    headers = ['Event Name', 'Date', 'Location', 'Price', 'Summary', 'URL', 'Organiser', 'Organiser Link']
+    column_widths = [71, 58, 111, 12, 81, 140]
+    # Set the column headers and their widths
+    
+    for col_num, (header, width) in enumerate(zip(headers, column_widths), 1):
+        # zip() pairs each element from headers with the corresponding element from column_widths,
+        # this creates an iterator of tuples where each tuple contains a header and its width
+        # enumerate() numerates each iteration of the tuples list, starting at 1, giving the column number
+        # Result: [(1, ('Event Name', 71)), (2, ('Date', 58)), (3, ('Location', 111)) etc.]
+        col_letter = get_column_letter(col_num)
+        # get_column_letter() is a built in function from openpyxl that returns the letter of the specified column, example: 1 -> 'A', 2 -> 'B'
+        sheet[f'{col_letter}1'] = header
+        # Will set the headers stated above in the first row of the sheet iterating through columns A, B, C, D, E, F 
+        sheet.column_dimensions[col_letter].width = width
+        # column_dimensions is a dictionary that stores the width of each column, the width is set to the width in the column_widths list
+        
+    for row_num, event in enumerate(events, 2):
+        sheet[f'A{row_num}'] = event.get('name', 'N/A')
+        sheet[f'B{row_num}'] = event.get('show_date_time', 'N/A')
+        sheet[f'C{row_num}'] = event.get('location', 'N/A')
+        sheet[f'D{row_num}'] = event.get('event_price', 'N/A')
+        sheet[f'E{row_num}'] = event.get('summary', 'N/A')
+        sheet[f'F{row_num}'] = event.get('url', 'N/A')
+        sheet[f'G{row_num}'] = event.get('event_organiser_name', 'N/A')
+        sheet[f'I{row_num}'] = event.get('event_organiser_link', 'N/A')
+    
+    workbook.save(filename)
+    print(f"\n-------------------------------------\nEvents saved to {filename}, download/view from the main menu.\n-------------------------------------")
+    return
 
 def parsed_scraped_date(date_time):
     if 'No date and time available' in date_time or not date_time.strip():
@@ -423,14 +489,14 @@ def scrape_eventbrite_top_events(location, category_slug, day, page_number, star
     return event_data, tags_counter, True
 
 
-def scrape_eventbrite_top_events_no_category(location, country):
-    url = f'https://www.eventbrite.co.uk/d/{country}--{location}/events/'
+def scrape_eventbrite_top_events_no_category(location):
+    url = f'https://www.eventbrite.co.uk/d/united-kingdom--{location}/events/'
     
     page = requests.get(url)
     
     soup = BeautifulSoup(page.content, 'html.parser')
     
-    events = soup.find_all('a', class_='event-card-link')
+    events = soup.find_all('a', class_='event-card-link ')
     
     event_data = []
     tags_counter = Counter()
@@ -509,70 +575,8 @@ def scrape_eventbrite_top_events_no_category(location, country):
         event_data.append(event_info)
     if not event_data:
         return event_data, False
-    return event_data, True
+   
 
-def save_to_csv(events):
-    directory = 'data_visuals'
-    file_name = os.path.join(directory, 'collected_events.csv')
-    file_exists = os.path.exists(file_name)
-    
-    fields = ['name', 'location', 'show_date_time', 'event_price', 'summary', 'url', 'event_organiser_name', 'event_organiser_link']
-
-    with open(file_name, 'a', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=fields)
-
-        if not file_exists:
-            writer.writeheader()
-
-        for event in events:
-            filtered_event = {field: event[field] for field in fields if field in event}
-            # this will only include the fields that are in the fields list above, so that
-            # fields that only have a programmatic purpose are not included in the CSV
-            # it works by creating a new dictionary with only the fields that are in the fields list
-            writer.writerow(filtered_event)
-
-    print(f"\n-------------------------------------\nEvents saved to {file_name}, download/view from the main menu.\n-------------------------------------")
-    return
-
-def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
-    
-    filename = check_file_unique(filename)
-    
-    workbook = openpyxl.Workbook()
-    # Create a new Excel workbook
-    sheet = workbook.active
-    # active means the first sheet in the workbook
-    sheet.title = 'Events Data'
-    # Set the title of the sheet to 'Events Data'
-    
-    headers = ['Event Name', 'Date', 'Location', 'Price', 'Summary', 'URL', 'Organiser', 'Organiser Link']
-    column_widths = [71, 58, 111, 12, 81, 140]
-    # Set the column headers and their widths
-    
-    for col_num, (header, width) in enumerate(zip(headers, column_widths), 1):
-        # zip() pairs each element from headers with the corresponding element from column_widths,
-        # this creates an iterator of tuples where each tuple contains a header and its width
-        # enumerate() numerates each iteration of the tuples list, starting at 1, giving the column number
-        # Result: [(1, ('Event Name', 71)), (2, ('Date', 58)), (3, ('Location', 111)) etc.]
-        col_letter = get_column_letter(col_num)
-        # get_column_letter() is a built in function from openpyxl that returns the letter of the specified column, example: 1 -> 'A', 2 -> 'B'
-        sheet[f'{col_letter}1'] = header
-        # Will set the headers stated above in the first row of the sheet iterating through columns A, B, C, D, E, F 
-        sheet.column_dimensions[col_letter].width = width
-        # column_dimensions is a dictionary that stores the width of each column, the width is set to the width in the column_widths list
-        
-    for row_num, event in enumerate(events, 2):
-        sheet[f'A{row_num}'] = event.get('name', 'N/A')
-        sheet[f'B{row_num}'] = event.get('show_date_time', 'N/A')
-        sheet[f'C{row_num}'] = event.get('location', 'N/A')
-        sheet[f'D{row_num}'] = event.get('event_price', 'N/A')
-        sheet[f'E{row_num}'] = event.get('summary', 'N/A')
-        sheet[f'F{row_num}'] = event.get('url', 'N/A')
-        sheet[f'G{row_num}'] = event.get('event_organiser_name', 'N/A')
-        sheet[f'I{row_num}'] = event.get('event_organiser_link', 'N/A')
-    
-    workbook.save(filename)
-    print(f"\n-------------------------------------\nEvents saved to {filename}, download/view from the main menu.\n-------------------------------------")
 
 def collection_menu():
     while True:
@@ -1144,9 +1148,8 @@ def search_top_categories():
 
 def search_top_events():
     
-    country = 'united-kingdom'
     location = input('Enter location: ').replace(' ', '')
-    search_key = f'all_top_events_{location}_{country}'
+    search_key = f'all_top_events_{location}'
     spinner = Spinner("Fetching events...")
     spinner.start()
     unique_events = []
@@ -1167,7 +1170,7 @@ def search_top_events():
             spinner.stop()
             spinner = Spinner("Scraping new events...")
             spinner.start()
-            events_data = scrape_eventbrite_top_events_no_category(location, country)
+            events_data = scrape_eventbrite_top_events_no_category(location)
             unique_events.extend(events_data)
             cache[search_key] = unique_events
     finally:
