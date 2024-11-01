@@ -391,7 +391,7 @@ def scrape_eventbrite_events(location, day, product, page_number, start_date, en
     
         date_parsed = parsed_scraped_date(event_date_time)
         
-        tags = page_detail_soup.find_all('a', class_='tags-link')
+        tags = page_detail_soup.find_all('a', class_='tags-link listing-tag eds-l-mar-top-4 eds-text-bs eds-text--center')
         for tag in tags:
             tags_counter[tag.get_text(strip=True)] += 1
 
@@ -477,7 +477,7 @@ def scrape_eventbrite_top_events(location, category_slug, day, page_number, star
                 
         date_parsed = parsed_scraped_date(event_date_time)
         
-        tags = page_detail_soup.find_all('a', class_='tags-link')
+        tags = page_detail_soup.find_all('a', class_='tags-link listing-tag eds-l-mar-top-4 eds-text-bs eds-text--center')
         for tag in tags:
             tags_counter[tag.get_text(strip=True)] += 1
 
@@ -564,7 +564,7 @@ def scrape_eventbrite_top_events_no_category(location):
     
         date_parsed = parsed_scraped_date(event_date_time)
         
-        tags = page_detail_soup.find_all('a', class_='tags-link')
+        tags = page_detail_soup.find_all('a', class_='tags-link listing-tag eds-l-mar-top-4 eds-text-bs eds-text--center')
         for tag in tags:
             tags_counter[tag.get_text(strip=True)] += 1
 
@@ -1153,6 +1153,15 @@ def search_top_events():
         main()
         return
 
+def display_common_tags(tags_counter):
+    if tags_counter: 
+        spinner = Spinner("Loading most common tags...")
+        spinner.start()
+        most_common_tags = tags_counter.most_common(6)
+        spinner.stop()
+        print(f'\nThe most common tags are:')
+        for tag, count in most_common_tags:
+            print(f'{tag}: {count}')
 
 def main():
     welcome = 0
@@ -1202,7 +1211,7 @@ def display_paginated_events(unique_events, search_key, user_selection, location
         start_index = current_page * page_size
         end_index = min(start_index + page_size, total_events)
         display_events(unique_events, start_index, end_index, user_selection, search_key)
-        
+
         if end_index >= total_events:
             # Fetch more events if available
             page_number += 1
@@ -1218,18 +1227,19 @@ def display_paginated_events(unique_events, search_key, user_selection, location
                 else:
                     break
                 
-                
                 print(f'Fetched {len(events_data)} events for page number: {page_number} ')
                 unique_events.extend(events_data)
                 tags_counter.update(new_tags_counter)
                 total_events = len(unique_events)
                 print(f'Total events after fetching: {total_events}')
+                # Display the most common tags
+                display_common_tags(tags_counter)
             finally:
                 spinner.stop()
                 if not more_events_check:
                     print("No more events to fetch.")
                     break
-        
+                
         user_input = input("-------------------------------------\nPress 'Y' to see more events, 'S' to start a new search, or any other key to exit: ").strip().lower()
         if user_input == 's':
             return 'new_search'
@@ -1239,15 +1249,6 @@ def display_paginated_events(unique_events, search_key, user_selection, location
             print("Exiting the program.")
             sys.exit()
 
-    spinner = Spinner("Loading most common tags...")
-    spinner.start()
-    most_common_tags = tags_counter.most_common(6)
-    spinner.stop()
-
-    print(f'\nThe most common tags are:')
-    for tag, count in most_common_tags:
-        print(f'{tag}: {count}')
-        
     return 'done'
         
 if __name__ == "__main__":
