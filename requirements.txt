@@ -19,3 +19,6 @@ pyparsing==3.2.0
 python-dotenv==1.0.1
 Werkzeug==3.1.1
 whitenoise==6.7.0
+requests==2.26.0
+beautifulsoup4==4.10.0
+python-dateutil==2.8.2
