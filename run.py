@@ -22,6 +22,8 @@ from geopy.distance import geodesic
 from dotenv import load_dotenv
 from flask import Flask, send_from_directory
 
+# TODO: Add loaders for event manipulation tasks
+
 app = Flask(__name__)
 
 load_dotenv()

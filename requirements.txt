@@ -1,1 +1,21 @@
-# Your requirements go here
+blinker==1.8.2
+click==8.1.7
+contourpy==1.3.0
+cycler==0.12.1
+dnspython==2.7.0
+et_xmlfile==2.0.0
+Flask==3.0.3
+fonttools==4.54.1
+geographiclib==2.0
+geopy==2.4.1
+itsdangerous==2.2.0
+kiwisolver==1.4.7
+matplotlib==3.9.2
+numpy==2.1.2
+openpyxl==3.1.5
+pillow==11.0.0
+pymongo==4.10.1
+pyparsing==3.2.0
+python-dotenv==1.0.1
+Werkzeug==3.1.1
+whitenoise==6.7.0
