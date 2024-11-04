@@ -82,6 +82,7 @@ def delete_all_files_in_gcs(bucket_name):
         blob.delete()
         # Delete each blob in the bucket
 
+
 class Spinner:
     def __init__(self, message='Loading...'):
         self.message = message
@@ -212,7 +213,6 @@ def save_to_csv(events):
 
 
 def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
-    
     filename = check_file_unique(filename)
     workbook = openpyxl.Workbook()
     # Create a new Excel workbook
@@ -545,7 +545,6 @@ def scrape_eventbrite_top_events(location, category_slug, day, page_number, star
 
 
 def scrape_eventbrite_top_events_no_category(location):
- 
     url = f'https://www.eventbrite.co.uk/d/united-kingdom--{location}/events/'
     page = requests.get(url)
     soup = BeautifulSoup(page.content, 'html.parser')
@@ -1060,7 +1059,6 @@ def search_events():
     location = input('Enter location: ').replace(' ', '%20')
     print('Would you like to enter a date? (Y/N)')
     date_choice = input('Enter your choice: ').strip().lower()
-    
     start_date = ''
     end_date = ''
     day = ''
@@ -1086,7 +1084,6 @@ def search_events():
     user_selection = 'eventbrite'
     spinner = Spinner("Fetching events...")
     spinner.start()
-
     unique_events = []
     page_number = 1
 
@@ -1206,7 +1203,6 @@ def search_top_categories():
 
 
 def search_top_events():
-    
     location = input('Enter location: ').replace(' ', '')
     search_key = f'all_top_events_{location}'
     spinner = Spinner("Fetching events...")
