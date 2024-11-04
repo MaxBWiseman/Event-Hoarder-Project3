@@ -23,10 +23,7 @@ from geopy.distance import geodesic
 from dotenv import load_dotenv
 from google.cloud import storage
 
-# TODO: Add loaders for event manipulation tasks, Fix / find another way to serve the data visualizations and CSV/Excel files
-
 load_dotenv()
-
 encoded_json = os.getenv('GOOGLE_CREDENTIALS')
 decoded_json = base64.b64decode(encoded_json).decode()
 # Decode the required credentials from the environment variable
