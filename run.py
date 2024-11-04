@@ -59,6 +59,7 @@ def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
     # Append the URL to the stored_urls list for viewing
     return url
 
+
 def process_new_files():
     files = os.listdir(UPLOAD_FOLDER)
     # List all files in the UPLOAD_FOLDER directory (data_visuals)
@@ -70,6 +71,7 @@ def process_new_files():
             # If file does not exist in the processed_files set, upload the file to Google Cloud Storage
             processed_files.add(file)
             # Add the file to the processed_files set to avoid re-uploading the same file
+
 
 def delete_all_files_in_gcs(bucket_name):
     storage_client = storage.Client()
@@ -159,6 +161,7 @@ def check_and_delete_old_events():
 
 check_and_delete_old_events()
 
+
 def save_to_mongodb(collection, search_key, collected_events):
     for event in collected_events:
         if isinstance(event, dict):
@@ -206,6 +209,7 @@ def save_to_csv(events):
 
     print(f"\n-------------------------------------\nEvents saved to {file_name}, download/view from the main menu.\n-------------------------------------")
     return
+
 
 def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
     
@@ -366,7 +370,8 @@ def display_events(events, start_index, end_index, user_selection, search_key):
 
     # Cache the events in the hashtable
     cache[search_key] = events
-    
+
+
 def scrape_eventbrite_events(location, day, product, page_number, start_date, end_date):
     url = f'https://www.eventbrite.com/d/united-kingdom--{location}/events--{day}/{product}/?page={page_number}&start_date={start_date}&end_date={end_date}'
     page = requests.get(url)
@@ -1106,7 +1111,7 @@ def search_events():
     if result == 'new_search':
         main()
         return
-    
+
 
 def search_top_categories():
     categories = [
@@ -1232,6 +1237,7 @@ def search_top_events():
         main()
         return
 
+
 def display_common_tags(tags_counter):
     if tags_counter: 
         spinner = Spinner("Loading most common tags...")
@@ -1241,6 +1247,7 @@ def display_common_tags(tags_counter):
         print(f'\nThe most common tags are:')
         for tag, count in most_common_tags:
             print(f'{tag}: {count}')
+
 
 def main():
     process_new_files()
