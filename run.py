@@ -81,7 +81,6 @@ def delete_all_files_in_gcs(bucket_name):
     # List all blobs in the bucket
     for blob in blobs:
         blob.delete()
-        print(f'Deleted {blob.name} from {bucket_name}')
         # Delete each blob in the bucket
 
 class Spinner:
