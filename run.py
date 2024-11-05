@@ -665,6 +665,7 @@ def extract_price(price_str):
     if match:
         return float(match.group())
     return 0.0
+# End of Co-Pilot code
 """
 The extract_price function uses a regular expression to find the first occurrence of a number in the event_price string.
 If a number is found, it is converted to a float and returned. If no number is found, 0.0 is returned.
@@ -684,49 +685,6 @@ def check_file_unique(image_path):
         counter += 1
     
     return image_path
-
-
-def get_coordinates(location, api_key):
-    url = f'https://maps.googleapis.com/maps/api/geocode/json?address={location}&key={api_key}'
-    # Construct the URL for the Google Maps Geocoding API
-    response = requests.get(url)
-    # Send a GET request to the URL
-    if response.status_code == 200:
-        data = response.json()
-    # If the response is successful, turn the response into a JSON object
-        if data['status'] == 'OK':
-    # Check if the status in the JSON object is 'OK'
-            location = data['results'][0]['geometry']['location']
-            return (location['lat'], location['lng'])
-    # Extract the latitude and longitude from the JSON object and return them as a tuple
-    return None
-
-
-def find_closest_events(user_location, events, api_key):
-    user_coordinates = get_coordinates(user_location, api_key)
-    # Get the coordinates of the user's location
-    if not user_coordinates:
-        print("User location could not be geocoded.")
-        return []
-
-    def distance_to_user(event):
-        event_coordinates = get_coordinates(event['location'], api_key)
-        # Get the coordinates of the event's location
-        if event_coordinates:
-            return geodesic(user_coordinates, event_coordinates).miles
-        # The geopy library's geodesic function calculates the distance between two points on the Earth's surface
-        # using the geodesic distance, which is more accurate than the haversine formula, as it accounts for the earths ellipsoidal shape,
-        # it returns the distance in miles. Sourch - https://www.askpython.com/python/examples/find-distance-between-two-geo-locations
-        return float('inf')
-        # If fails return infinity as this is a easy way to sort the events with no coordinates to the end of the list
-        
-    events_with_coordinates = [event for event in events if event.get('location')]
-    # Filter out events with no location
-    events_with_coordinates.sort(key=distance_to_user)
-    # Sort the events by using the distance_to_user function as the key
-    
-    return events_with_coordinates[::-1]
-    # Return the sorted events in reverse order
 
 
 def compare_events(events):
@@ -893,8 +851,51 @@ def compare_events(events):
         else:
             print('\n-------------------------------------\nInvalid choice. Please try again.\n-------------------------------------')
             continue
-     
-      
+
+
+def get_coordinates(location, api_key):
+    url = f'https://maps.googleapis.com/maps/api/geocode/json?address={location}&key={api_key}'
+    # Construct the URL for the Google Maps Geocoding API
+    response = requests.get(url)
+    # Send a GET request to the URL
+    if response.status_code == 200:
+        data = response.json()
+    # If the response is successful, turn the response into a JSON object
+        if data['status'] == 'OK':
+    # Check if the status in the JSON object is 'OK'
+            location = data['results'][0]['geometry']['location']
+            return (location['lat'], location['lng'])
+    # Extract the latitude and longitude from the JSON object and return them as a tuple
+    return None
+
+
+def find_closest_events(user_location, events, api_key):
+    user_coordinates = get_coordinates(user_location, api_key)
+    # Get the coordinates of the user's location
+    if not user_coordinates:
+        print("\n-------------------------------------\nUser location could not be geocoded.\n-------------------------------------")
+        return []
+
+    def distance_to_user(event):
+        event_coordinates = get_coordinates(event['location'], api_key)
+        # Get the coordinates of the event's location
+        if event_coordinates:
+            return geodesic(user_coordinates, event_coordinates).miles
+        # The geopy library's geodesic function calculates the distance between two points on the Earth's surface
+        # using the geodesic distance, which is more accurate than the haversine formula, as it accounts for the earths ellipsoidal shape,
+        # it returns the distance in miles. Sourch - https://www.askpython.com/python/examples/find-distance-between-two-geo-locations
+        return float('inf')
+        # If fails return infinity as this is a easy way to sort the events with no coordinates to the end of the list
+        
+    events_with_coordinates = [event for event in events if event.get('location')]
+    # Filter out events with no location
+    events_with_coordinates.sort(key=distance_to_user)
+    # Sort the events by using the distance_to_user function as the key
+    
+    return events_with_coordinates[::-1]
+    # Return the sorted events in reverse order
+
+
 def sort_events(events):
     if len(events) < 2:
         print('Not enough events to sort.')
@@ -966,10 +967,12 @@ def sort_events(events):
                 if closest_events:
                     display_events(closest_events, 0, len(closest_events), 'data-manipulation', 'None')
                 else:
-                    print('No events found or location cannot be geocoded.')
+                    print('\n-------------------------------------\nNo events found or location cannot be geocoded.\n-------------------------------------')
+                    continue
+                del user_location # Ensure the user_location is deleted from memory
             elif choice == '6':
                 spinner.stop()
-                print('Returning to the main menu.')
+                print('\n-------------------------------------\nReturning to the main menu.\n-------------------------------------')
                 main()
                 return
             else:
