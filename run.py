@@ -77,11 +77,18 @@ def delete_all_files_in_gcs(bucket_name):
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blobs = bucket.list_blobs()
+    
     # List all blobs in the bucket
     for blob in blobs:
         blob.delete()
-        # Delete each blob in the bucket
-    print('All files deleted from Google Cloud Storage.')
+        print(f"Deleted {blob.name}")
+    
+    # Confirm all blobs are deleted
+    remaining_blobs = list(bucket.list_blobs())
+    if not remaining_blobs:
+        print('All files deleted from Google Cloud Storage.')
+    else:
+        print('Some files could not be deleted.')
 
 
 class Spinner:
@@ -1316,7 +1323,7 @@ def main():
             if leave == 'y':
                 delete_all_files_in_gcs('data-visuals-serving')
                 print("Files are being deleted from GCS...")
-                time.sleep(10)  # Ensure deletion process has time to complete
+                time.sleep(3)  # Ensure deletion process has time to complete
                 print("-------------------------------------\nExiting the program\n-------------------------------------.")
                 sys.exit()
             else:
