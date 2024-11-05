@@ -81,6 +81,7 @@ def delete_all_files_in_gcs(bucket_name):
     for blob in blobs:
         blob.delete()
         # Delete each blob in the bucket
+    print('All files deleted from Google Cloud Storage.')
 
 
 class Spinner:
@@ -1314,8 +1315,10 @@ def main():
             leave = input("Are you sure you want to exit? Exiting will delete any files you may have made.\nBe sure to view/download them first! (Y/N): ").strip().lower()
             if leave == 'y':
                 delete_all_files_in_gcs('data-visuals-serving')
+                print("Files are being deleted from GCS...")
+                time.sleep(5)  # Ensure deletion process has time to complete
                 print("-------------------------------------\nExiting the program\n-------------------------------------.")
-                time.sleep(5)
+                time.sleep(2)
                 sys.exit()
             else:
                 continue
