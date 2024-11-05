@@ -132,12 +132,13 @@ collection = db['Event_Data']
 
 def view_data_files():
     if not stored_urls:
-        print('No files uploaded yet.')
+        print('\n-------------------------------------\nNo files uploaded yet.\n-------------------------------------')
     else:
         for url in stored_urls:
             print(url)
     input('DO NOT USE CTRL-C TO COPY\nGo back to the main menu? Press Enter to continue.')
     main()
+    return
 
 
 def check_and_delete_old_events():
@@ -646,22 +647,14 @@ def collection_menu():
         elif choice == '3':
             print("Going back to the main menu.")
             main()
+            return
         elif choice == '#':
             collection.delete_many({})
             print('-------------------------------------\nDatabase cleared\n-------------------------------------.')
             main()
+            return
         else:
-            print("Invalid choice. Please try again.")
-
-
-def get_unique_search_keys():
-    pipeline = [
-        {'$group': {'_id': '$search_key'}},
-    ]
-    unique_search_keys = list(collection.aggregate(pipeline))
-    return [key['_id'] for key in unique_search_keys]
-# This function will return a list of unique search keys from the mongodb collection
-# The pipeline will group the documents by the search_key field and return only unique values
+            print("\n-------------------------------------\nInvalid choice. Please try again.\n-------------------------------------")
 
 # This function was built with help from Co-Pilot when asked how could i extract the price from the event_price field
 # Its suggestion was the re module. As i needed to remove other strings and currency symbols from the event_price field
@@ -741,162 +734,165 @@ def compare_events(events):
         print('Not enough events to compare.')
         return
     
-    print('\nWhat would you like to compare?')
-    print('1. Average price of events')
-    print('2. Median price of events')
-    print('3. Event count per day')
-    print('4. Event count per month')
-    print('5. Event price distribution')
-    print('6. Event dates over time')
-    print('7. Main Menu')
-    choice = input('Enter your choice: ').strip()
+    while True:
+        print('\nWhat would you like to compare?')
+        print('1. Average price of events')
+        print('2. Median price of events')
+        print('3. Event count per day')
+        print('4. Event count per month')
+        print('5. Event price distribution')
+        print('6. Event dates over time')
+        print('7. Main Menu')
+        choice = input('Enter your choice: ').strip()
     
-    if choice == '1':
-        spinner = Spinner('Processing...')
-        spinner.start()
-        try:
-            price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
-            # Extract the price from the event_price field for each event, not including 'sold out', 'free', and 'donation' events
-            result = sum(price) / len(price) if price else 0
-            # Calculate the average price of the events, sum the prices and divide by the number of prices
-            floored_result = math.floor(result)
-            # Round down the result to the nearest whole number
-            print(f'\nThe average price of events is: £{floored_result}')
-        finally:
-            spinner.stop()
-    elif choice == '2':
-        spinner = Spinner('Processing...')
-        spinner.start()
-        try:
-            price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
-            # Extract the price from the event_price field for each event, not including 'sold out', 'free', and 'donation' events
-            if price:
-                price.sort()
-                # Sort the list of prices in ascending order
-                n = len(price)
-                # Get length of list
-                mid = n // 2
-                # Find the middle index
-                if n % 2 == 0:
-                    result = (price[mid - 1] + price[mid]) / 2
-                    # If the list length is even, the median is the average of the two middle elements
+        if choice == '1':
+            spinner = Spinner('Processing...')
+            spinner.start()
+            try:
+                price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
+                # Extract the price from the event_price field for each event, not including 'sold out', 'free', and 'donation' events
+                result = sum(price) / len(price) if price else 0
+                # Calculate the average price of the events, sum the prices and divide by the number of prices
+                floored_result = math.floor(result)
+                # Round down the result to the nearest whole number
+                print(f'\nThe average price of events is: £{floored_result}')
+            finally:
+                spinner.stop()
+        elif choice == '2':
+            spinner = Spinner('Processing...')
+            spinner.start()
+            try:
+                price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
+                # Extract the price from the event_price field for each event, not including 'sold out', 'free', and 'donation' events
+                if price:
+                    price.sort()
+                    # Sort the list of prices in ascending order
+                    n = len(price)
+                    # Get length of list
+                    mid = n // 2
+                    # Find the middle index
+                    if n % 2 == 0:
+                        result = (price[mid - 1] + price[mid]) / 2
+                        # If the list length is even, the median is the average of the two middle elements
+                    else:
+                        result = price[mid]
+                        # If the list length is odd, the median is the middle element
                 else:
-                    result = price[mid]
-                    # If the list length is odd, the median is the middle element
-            else:
-                result = 0
-                # If empty list, return 0
-            print(f'\nThe median price of events is: £{result}')
-        finally:
-            spinner.stop()
-    elif choice == '3':
-        spinner = Spinner('Processing...')
-        spinner.start()
-        try:
-            event_days = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%d') for event in events]
-            # List comprehension to extract the day and year from the event_date_time field for each event, the date is expected to be in the format 'YYYY-MM-DD HH:MM:SS' and is parsed to a datetime object.
-            # The second argument formats the datetime object to 'YYYY-DD' to be used to group the events by day
-            days_counts = Counter(event_days)
-            # Use the Counter class to count the occurrences of each day, works by setting a dictionary key with each collected day and incrementing the value each time the day is found
-            days, counts = zip(*sorted(days_counts.items()))
-            # Take the dictionary days_counts and retrieve its items as a list of tuples with items(), then sort the tuples by the keys (days) sorted(), take the sorted list of tuples and unpacks them into two lists, one for keys and one for values zip(*).
-            # the splat operator * allowed zip() to take the list of tuples and unpack them into two separate lists, without it zip() would return one list of tuples
-            plt.bar(days, counts)
-            # Create a bar chart with the days on the x-axis and the counts on the y-axis
-            plt.title('Events By Day')
-            plt.xlabel('Day')
-            plt.ylabel('Number of Events')
-            plt.xticks(rotation=45)
-            # Rotate the x-axis labels by 45 degrees for better readability
-            plt.tight_layout()
-            # Automatic padding
-            image_path = 'data_visuals/event_count_per_day.png'
-            image_path = check_file_unique(image_path)
-            plt.savefig(image_path)
-            # Save the plot as an image
-            plt.close()
-            print(f'\n-------------------------------------\nEvent count per day saved as {image_path}, download/view from the main menu.\n-------------------------------------')
-        finally:
-            spinner.stop()
-    elif choice == '4':
-        spinner = Spinner('Processing...')
-        spinner.start()
-        try:
-            event_months = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m') for event in events]
-            # List comprehension to extract the month and year from the event_date_time field for each event, the date is expected to be in the format 'YYYY-MM-DD HH:MM:SS' and is parsed to a datetime object.
-            # The second argument formats the datetime object to 'YYYY-MM' to be used to group the events by month
-            months_counts = Counter(event_months)
-            # Use the Counter class to count the occurrences of each month, works by setting a dictionary key with each collected month and incrementing the value each time the month is found
-            months, counts = zip(*sorted(months_counts.items()))
-            # Take the dictionary months_counts and retrieve its items as a list of tuples with items(), then sort the tuples by the keys (months) sorted(), take the sorted list of tuples and unpacks them into two lists, one for keys and one for values zip(*).
-            # the splat operator * allowed zip() to take the list of tuples and unpack them into two separate lists, without it zip() would return one list of tuples
-            plt.bar(months, counts)
-            # Create a bar chart with the months on the x-axis and the counts on the y-axis
-            plt.title('Events By Month')
-            plt.xlabel('Month')
-            plt.ylabel('Number of Events')
-            plt.xticks(rotation=45)
-            # Rotate the x-axis labels by 45 degrees for better readability
-            plt.tight_layout()
-            # Automatic padding
-            image_path = 'data_visuals/event_count_per_month.png'
-            image_path = check_file_unique(image_path)
-            plt.savefig(image_path)
-            # Save the plot as an image
-            plt.close()
-            print(f'\n-------------------------------------\nEvent count per month saved as {image_path}, download/view from the main menu.\n-------------------------------------')
-        finally:
-            spinner.stop()
-    elif choice == '5':
-        spinner = Spinner('Processing...')
-        spinner.start()
-        try:
-            price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
-            # List comprehension to extract the prices from the events, not including 'sold out', 'free', and 'donation' events, then calling the extract_price function to extract the numeric part of the price
-            plt.hist(price, bins=20, edgecolor='black')
-            # A bin is a range of values that is used to group the data, the bins argument specifies the number of bins to use, the edgecolor argument specifies the color of the edges of the bars
-            plt.title('Event Price Distribution')
-            plt.xlabel('Price (£)')
-            plt.ylabel('Frequency')
-            image_path = 'data_visuals/event_price_distribution.png'
-            image_path = check_file_unique(image_path)
-            plt.savefig(image_path)
-            plt.close()
-            print(f'\n-------------------------------------\nEvent price distribution saved as {image_path}, download/view from the main menu.\n-------------------------------------')
-        finally:
-            spinner.stop()
-    elif choice == '6':
-        spinner = Spinner('Processing...')
-        spinner.start()
-        try:
-            event_dates = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').date() for event in events]
-            # Grab all the event dates from the event_date_time field, parse the date and time to a datetime object, then extract the date
-            date_counts = Counter(event_dates)
-            # Count each occurrence of the different dates
-            dates, counts = zip(*sorted(date_counts.items()))
-            # Sort the dates and counts, then unpack them into two lists, it works by taking the date_counts Counter dictionary with items() which returns the key-value pairs as a list of tuples,
-            # then sorted() sorts the tuples by the keys (dates), then zip() takes the sorted list of tuples and unpacks them into two separate lists using the splat operator *
-            plt.plot(dates, counts)
-            # Create a line plot with the dates on the x-axis and the counts on the y-axis
-            plt.title('Events Over Time')
-            plt.xlabel('Date')
-            plt.ylabel('Number of Events')
-            plt.xticks(rotation=45)
-            # Rotate the labels on the x-axis by 45 degrees for better readability
-            plt.tight_layout()
-            # Add padding to the plot
-            image_path = 'data_visuals/event_dates_over_time.png'
-            image_path = check_file_unique(image_path)
-            plt.savefig(image_path)
-            plt.close()
-            print(f'\n-------------------------------------\nEvent dates over time saved as {image_path}, download/view from the main menu.\n-------------------------------------')
-        finally:
-            spinner.stop()
-    elif choice == '7':
-        print('Returning to the main menu.')
-        main()
-    else:
-        print('No valid comparison to display.')
+                    result = 0
+                    # If empty list, return 0
+                print(f'\nThe median price of events is: £{result}')
+            finally:
+                spinner.stop()
+        elif choice == '3':
+            spinner = Spinner('Processing...')
+            spinner.start()
+            try:
+                event_days = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%d') for event in events]
+                # List comprehension to extract the day and year from the event_date_time field for each event, the date is expected to be in the format 'YYYY-MM-DD HH:MM:SS' and is parsed to a datetime object.
+                # The second argument formats the datetime object to 'YYYY-DD' to be used to group the events by day
+                days_counts = Counter(event_days)
+                # Use the Counter class to count the occurrences of each day, works by setting a dictionary key with each collected day and incrementing the value each time the day is found
+                days, counts = zip(*sorted(days_counts.items()))
+                # Take the dictionary days_counts and retrieve its items as a list of tuples with items(), then sort the tuples by the keys (days) sorted(), take the sorted list of tuples and unpacks them into two lists, one for keys and one for values zip(*).
+                # the splat operator * allowed zip() to take the list of tuples and unpack them into two separate lists, without it zip() would return one list of tuples
+                plt.bar(days, counts)
+                # Create a bar chart with the days on the x-axis and the counts on the y-axis
+                plt.title('Events By Day')
+                plt.xlabel('Day')
+                plt.ylabel('Number of Events')
+                plt.xticks(rotation=45)
+                # Rotate the x-axis labels by 45 degrees for better readability
+                plt.tight_layout()
+                # Automatic padding
+                image_path = 'data_visuals/event_count_per_day.png'
+                image_path = check_file_unique(image_path)
+                plt.savefig(image_path)
+                # Save the plot as an image
+                plt.close()
+                print(f'\n-------------------------------------\nEvent count per day saved as {image_path}, download/view from the main menu.\n-------------------------------------')
+            finally:
+                spinner.stop()
+        elif choice == '4':
+            spinner = Spinner('Processing...')
+            spinner.start()
+            try:
+                event_months = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m') for event in events]
+                # List comprehension to extract the month and year from the event_date_time field for each event, the date is expected to be in the format 'YYYY-MM-DD HH:MM:SS' and is parsed to a datetime object.
+                # The second argument formats the datetime object to 'YYYY-MM' to be used to group the events by month
+                months_counts = Counter(event_months)
+                # Use the Counter class to count the occurrences of each month, works by setting a dictionary key with each collected month and incrementing the value each time the month is found
+                months, counts = zip(*sorted(months_counts.items()))
+                # Take the dictionary months_counts and retrieve its items as a list of tuples with items(), then sort the tuples by the keys (months) sorted(), take the sorted list of tuples and unpacks them into two lists, one for keys and one for values zip(*).
+                # the splat operator * allowed zip() to take the list of tuples and unpack them into two separate lists, without it zip() would return one list of tuples
+                plt.bar(months, counts)
+                # Create a bar chart with the months on the x-axis and the counts on the y-axis
+                plt.title('Events By Month')
+                plt.xlabel('Month')
+                plt.ylabel('Number of Events')
+                plt.xticks(rotation=45)
+                # Rotate the x-axis labels by 45 degrees for better readability
+                plt.tight_layout()
+                # Automatic padding
+                image_path = 'data_visuals/event_count_per_month.png'
+                image_path = check_file_unique(image_path)
+                plt.savefig(image_path)
+                # Save the plot as an image
+                plt.close()
+                print(f'\n-------------------------------------\nEvent count per month saved as {image_path}, download/view from the main menu.\n-------------------------------------')
+            finally:
+                spinner.stop()
+        elif choice == '5':
+            spinner = Spinner('Processing...')
+            spinner.start()
+            try:
+                price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
+                # List comprehension to extract the prices from the events, not including 'sold out', 'free', and 'donation' events, then calling the extract_price function to extract the numeric part of the price
+                plt.hist(price, bins=20, edgecolor='black')
+                # A bin is a range of values that is used to group the data, the bins argument specifies the number of bins to use, the edgecolor argument specifies the color of the edges of the bars
+                plt.title('Event Price Distribution')
+                plt.xlabel('Price (£)')
+                plt.ylabel('Frequency')
+                image_path = 'data_visuals/event_price_distribution.png'
+                image_path = check_file_unique(image_path)
+                plt.savefig(image_path)
+                plt.close()
+                print(f'\n-------------------------------------\nEvent price distribution saved as {image_path}, download/view from the main menu.\n-------------------------------------')
+            finally:
+                spinner.stop()
+        elif choice == '6':
+            spinner = Spinner('Processing...')
+            spinner.start()
+            try:
+                event_dates = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').date() for event in events]
+                # Grab all the event dates from the event_date_time field, parse the date and time to a datetime object, then extract the date
+                date_counts = Counter(event_dates)
+                # Count each occurrence of the different dates
+                dates, counts = zip(*sorted(date_counts.items()))
+                # Sort the dates and counts, then unpack them into two lists, it works by taking the date_counts Counter dictionary with items() which returns the key-value pairs as a list of tuples,
+                # then sorted() sorts the tuples by the keys (dates), then zip() takes the sorted list of tuples and unpacks them into two separate lists using the splat operator *
+                plt.plot(dates, counts)
+                # Create a line plot with the dates on the x-axis and the counts on the y-axis
+                plt.title('Events Over Time')
+                plt.xlabel('Date')
+                plt.ylabel('Number of Events')
+                plt.xticks(rotation=45)
+                # Rotate the labels on the x-axis by 45 degrees for better readability
+                plt.tight_layout()
+                # Add padding to the plot
+                image_path = 'data_visuals/event_dates_over_time.png'
+                image_path = check_file_unique(image_path)
+                plt.savefig(image_path)
+                plt.close()
+                print(f'\n-------------------------------------\nEvent dates over time saved as {image_path}, download/view from the main menu.\n-------------------------------------')
+            finally:
+                spinner.stop()
+        elif choice == '7':
+            print('Returning to the main menu.')
+            main()
+            return
+        else:
+            print('\n-------------------------------------\nInvalid choice. Please try again.\n-------------------------------------')
+            continue
      
       
 def sort_events(events):
@@ -904,77 +900,84 @@ def sort_events(events):
         print('Not enough events to sort.')
         return
     
-    print('\nWhat would you like to sort?')
-    print('1. Free events')
-    print('2. Cheapest events')
-    print('3. Most expensive events')
-    print('4. Events happening soon')
-    print('5. Closest distance events')
-    print('6. Main Menu')
-    choice = input('Enter your choice: ').strip()
-    
-    spinner = Spinner("Sorting events...")
-    spinner.start()
-    
-    try:
-        # Lambda functions are a powerful tool for writing concise, one-off functions, especially useful in situations like sorting, filtering, and mapping.
-        if choice == '1':
-            free_events = [event for event in events if event.get('event_price', '').lower() in ['free', 'donation']]
-        # Filter in events with event_price of 'free' and 'donation' with list comprehension, if not found, return an empty list
-            display_events(free_events[::-1], 0, len(free_events), 'data-manipulation', 'None')
-        # Display the sorted events from bottom to top
-        elif choice == '2':
-            cheap_events = [event for event in events if event.get('event_price', '').lower() not in ['sold out', 'free']]
-        # Filter out events with event_price of 'free' and 'sold out' with list comprehension, if not found, return an empty list
-            cheap_events_sorted = sorted(cheap_events, key=lambda event: extract_price(event.get('event_price', '0')))
-        # Sort the remaining events in order based on event_price, the key argument specifies a custom sorting function for the sorted() method, and extracts a comparison key from each element.
-        # The lambda function is given as the key argument to the sorted() method, it takes argument x that represents each element in the list, and extracts the price from the event_price field
-        # with help from the extract_price function. The sorted() method will sort the events in ascending order based on the extracted price.
-            display_events(cheap_events_sorted[::-1], 0, len(cheap_events_sorted), 'data-manipulation', 'None')
-        # Display the sorted events from bottom to top, ::-1 is used to reverse the list
-        elif choice == '3':
-            paid_events = [event for event in events if event.get('event_price', '').lower() not in ['free', 'donation']]
-        # Filter out events with event_price of 'free' and 'donation' with list comprehension, if not found, return an empty list
-            expensive_events_sorted = sorted(paid_events, key=lambda event: extract_price(event.get('event_price', '0')), reverse=True)
-        # Sort the remaining events in reverse order based on event_price, the key argument specifies a custom sorting function for the sorted() method, and extracts a comparison key from each element.
-        # The lambda function is given as the key argument to the sorted() method, it takes argument x that represents each element in the list, and extracts the price from the event_price field
-        # with help from the extract_price function. The sorted() method will sort the events in decending order based on the extracted price.
-            display_events(expensive_events_sorted[::-1], 0, len(expensive_events_sorted), 'data-manipulation', 'None')
-        # Display the sorted events from bottom to top , ::-1 is used to reverse the list
-        elif choice == '4':
-            current_time = datetime.now()
-            soonest_events = []
-            for event in events:
-                if event.get('event_date_time'):
-                    event_date_time = datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S')
-                    # Convert the getted event_date_time string to a datetime object
-                    if event_date_time > current_time:
-                        soonest_events.append(event)
+    while True:
+        print('\nWhat would you like to sort?')
+        print('1. Free events')
+        print('2. Cheapest events')
+        print('3. Most expensive events')
+        print('4. Events happening soon')
+        print('5. Closest distance events')
+        print('6. Main Menu')
+        choice = input('Enter your choice: ').strip()
+        
+        spinner = Spinner("Sorting events...")
+        spinner.start()
+        
+        try:
+            # Lambda functions are a powerful tool for writing concise, one-off functions, especially useful in situations like sorting, filtering, and mapping.
+            if choice == '1':
+                free_events = [event for event in events if event.get('event_price', '').lower() in ['free', 'donation']]
+            # Filter in events with event_price of 'free' and 'donation' with list comprehension, if not found, return an empty list
+                display_events(free_events[::-1], 0, len(free_events), 'data-manipulation', 'None')
+            # Display the sorted events from bottom to top
+            elif choice == '2':
+                cheap_events = [event for event in events if event.get('event_price', '').lower() not in ['sold out', 'free']]
+            # Filter out events with event_price of 'free' and 'sold out' with list comprehension, if not found, return an empty list
+                cheap_events_sorted = sorted(cheap_events, key=lambda event: extract_price(event.get('event_price', '0')))
+            # Sort the remaining events in order based on event_price, the key argument specifies a custom sorting function for the sorted() method, and extracts a comparison key from each element.
+            # The lambda function is given as the key argument to the sorted() method, it takes argument x that represents each element in the list, and extracts the price from the event_price field
+            # with help from the extract_price function. The sorted() method will sort the events in ascending order based on the extracted price.
+                display_events(cheap_events_sorted[::-1], 0, len(cheap_events_sorted), 'data-manipulation', 'None')
+            # Display the sorted events from bottom to top, ::-1 is used to reverse the list
+            elif choice == '3':
+                paid_events = [event for event in events if event.get('event_price', '').lower() not in ['free', 'donation']]
+            # Filter out events with event_price of 'free' and 'donation' with list comprehension, if not found, return an empty list
+                expensive_events_sorted = sorted(paid_events, key=lambda event: extract_price(event.get('event_price', '0')), reverse=True)
+            # Sort the remaining events in reverse order based on event_price, the key argument specifies a custom sorting function for the sorted() method, and extracts a comparison key from each element.
+            # The lambda function is given as the key argument to the sorted() method, it takes argument x that represents each element in the list, and extracts the price from the event_price field
+            # with help from the extract_price function. The sorted() method will sort the events in decending order based on the extracted price.
+                display_events(expensive_events_sorted[::-1], 0, len(expensive_events_sorted), 'data-manipulation', 'None')
+            # Display the sorted events from bottom to top , ::-1 is used to reverse the list
+            elif choice == '4':
+                current_time = datetime.now()
+                soonest_events = []
+                for event in events:
+                    if event.get('event_date_time'):
+                        event_date_time = datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S')
+                        # Convert the getted event_date_time string to a datetime object
+                        if event_date_time > current_time:
+                            soonest_events.append(event)
+                        else:
+                            continue
+                        soonest_events.sort(key=lambda event: event['event_date_time'])
+                        # lambda function is used as argument for sort(), calling a function on every element in the list, the lambda function takes an event as an argument and returns the event_date_time
+                        # the sort() then kicks in and sorts the events based on the event_date_time
                     else:
                         continue
-                    soonest_events.sort(key=lambda event: event['event_date_time'])
-                    # lambda function is used as argument for sort(), calling a function on every element in the list, the lambda function takes an event as an argument and returns the event_date_time
-                    # the sort() then kicks in and sorts the events based on the event_date_time
+                display_events(soonest_events[::-1], 0, len(soonest_events), 'data-manipulation', 'None')
+            elif choice == '5':
+                spinner.stop()
+                user_location = input('Enter your postcode or specific location: ')
+                spinner = Spinner("Sorting events...")
+                spinner.start()
+                api_key = os.getenv('GOOGLE_MAPS_API_KEY')
+                closest_events = find_closest_events(user_location, events, api_key)
+                # This is calculated using the geopy library's geodesic function, which calculates the distance between two points on the Earth's surface using the geodesic distance, which is more accurate than the haversine formula
+                if closest_events:
+                    display_events(closest_events, 0, len(closest_events), 'data-manipulation', 'None')
                 else:
-                    continue
-            display_events(soonest_events[::-1], 0, len(soonest_events), 'data-manipulation', 'None')
-        elif choice == '5':
-            spinner.stop()
-            user_location = input('Enter your postcode or specific location: ')
-            spinner = Spinner("Sorting events...")
-            spinner.start()
-            api_key = os.getenv('GOOGLE_MAPS_API_KEY')
-            closest_events = find_closest_events(user_location, events, api_key)
-            # This is calculated using the geopy library's geodesic function, which calculates the distance between two points on the Earth's surface using the geodesic distance, which is more accurate than the haversine formula
-            if closest_events:
-                display_events(closest_events, 0, len(closest_events), 'data-manipulation', 'None')
+                    print('No events found or location cannot be geocoded.')
+            elif choice == '6':
+                spinner.stop()
+                print('Returning to the main menu.')
+                main()
+                return
             else:
-                print('No events found or location cannot be geocoded.')
-        elif choice == '6':
-            print('Returning to the main menu.')
-            main()
-    finally:
-        spinner.stop()
+                print('\n-------------------------------------\nInvalid choice. Please try again.\n-------------------------------------')
+                spinner.stop()
+                continue
+        finally:
+            spinner.stop()
 
 
 def event_manipulation_menu(events):
@@ -992,7 +995,23 @@ def event_manipulation_menu(events):
         elif choice == '3':
             print('Returning to the main menu.')
             main()
+            return
+        else:
+            print('\n-------------------------------------\nInvalid choice. Please try again.\n-------------------------------------')
 
+
+def get_unique_search_keys():
+    pipeline = [
+        {'$group': {'_id': '$search_key'}},
+    ]
+    # A pipeline is a list of operations that MongoDB applies to the documents in a collection,
+    # the $group operator groups documents by a specified expression, _id is a system variable that holds the value of the field that the $group operator groups by,
+    # in this case, the search_key field, without the $ mongodb would treat it as a litteral string rather than a reference to a field
+    unique_search_keys = list(collection.aggregate(pipeline))
+    # Make a list of all the unique search keys in the collection (mongo db) and aggregate it against the pipeline
+    # example of the pipeline output: [{'_id': 'data-manipulation_london'}, {'_id': 'data-manipulation_birmingham'}]
+    return [key['_id'] for key in unique_search_keys]
+    # For every key in the unique_search_keys list, return the value of the item with its '_id' field
 
 def search_events_in_collection():
     unique_search_keys = get_unique_search_keys()
@@ -1004,31 +1023,48 @@ def search_events_in_collection():
     
     print("-------------------------------------\nChoose a search key:")
     for i, key in enumerate(unique_search_keys, 1):
+    # Enumerate will number each unique search key starting from 1, i will be the number and key will be the search key
         print(f"{i}. {key}")
-        
-    choice = input("\nEnter the number of your choice: ").strip()
-    all_events = list(collection.find({'search_key': unique_search_keys[int(choice) - 1]}))
+    
+    while True:
+        try:    
+            choice = input("\nEnter the number of your choice: ").strip()
+            choice_index = int(choice) - 1
+            # Ensure choice is an interger and zero-indexed
+            if choice_index < 0 or choice_index >= len(unique_search_keys):
+            # Check if the choice is within the range of the unique search keys
+                raise IndexError
+                # Raise an IndexError if the choice is out of range
+            all_events = list(collection.find({'search_key': unique_search_keys[choice_index]}))
+            # Make a list of all mongodb data with the search_key that matches the user choice
+            break
+        except ValueError:
+            print("\n-------------------------------------\nInvalid input. Please enter a valid number.\n-------------------------------------")
+        except IndexError:
+            print(f"\n-------------------------------------\nInvalid choice. Please enter a number between 1 and {len(unique_search_keys)}.\n-------------------------------------")
     
     if not all_events:
         print("No events found for the selected search key.")
         return
     
     display_events(all_events, 0, len(all_events), user_selection, search_key=unique_search_keys[int(choice) - 1])
-
-    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV or Excel file? (C/E) or perform tasks on the data? (T): ').strip().lower()
-    if save_choice == 'c':
-        try:
-            save_to_csv(all_events)
-        except Exception as e:
-            print(f"Error saving events to CSV: {e}")
-    elif save_choice == 'e':
-        try:
-            save_to_excel(all_events)
-        except Exception as e:
-            print(f"Error saving events to Excel: {e}")
-    elif save_choice == 't':
-        event_manipulation_menu(all_events)
-
+    while True:
+        save_choice = input('-------------------------------------\nWould you like to save the events to a CSV or Excel file? (C/E) or perform tasks on the data? (T): ').strip().lower()
+        if save_choice == 'c':
+            try:
+                save_to_csv(all_events)
+            except Exception as e:
+                print(f"Error saving events to CSV: {e}")
+        elif save_choice == 'e':
+            try:
+                save_to_excel(all_events)
+            except Exception as e:
+                print(f"Error saving events to Excel: {e}")
+        elif save_choice == 't':
+            event_manipulation_menu(all_events)
+        else:
+            print('\n-------------------------------------\nInvalid choice. Please C to print to CSV, E to print to Excel\nOr T to perform tasks with the event data.\n-------------------------------------')
+            continue
 
 def view_all_events():
     all_events = list(collection.find({}))
@@ -1037,22 +1073,24 @@ def view_all_events():
         print('No events found')
         return
     
-    result = display_events(all_events, 0, len(all_events), user_selection, search_key='None')
-    
-    save_choice = input('-------------------------------------\nWould you like to save the events to a CSV or Excel file? (C/E) or perform tasks on the data? (T): ').strip().lower()
-    if save_choice == 'c':
-        try:
-            save_to_csv(all_events)
-        except Exception as e:
-            print(f"Error saving events to CSV: {e}")
-    elif save_choice == 'e':
-        try:
-            save_to_excel(all_events)
-        except Exception as e:
-            print(f"Error saving events to Excel: {e}")
-    elif save_choice == 't':
-        event_manipulation_menu(all_events)
-        
+    display_events(all_events, 0, len(all_events), user_selection, search_key='None')
+    while True:
+        save_choice = input('-------------------------------------\nWould you like to save the events to a CSV or Excel file? (C/E) or perform tasks on the data? (T): ').strip().lower()
+        if save_choice == 'c':
+            try:
+                save_to_csv(all_events)
+            except Exception as e:
+                print(f"Error saving events to CSV: {e}")
+        elif save_choice == 'e':
+            try:
+                save_to_excel(all_events)
+            except Exception as e:
+                print(f"Error saving events to Excel: {e}")
+        elif save_choice == 't':
+            event_manipulation_menu(all_events)
+        else:
+            print('\n-------------------------------------\nInvalid choice. Please C to print to CSV, E to print to Excel\nOr T to perform tasks with the event data.\n-------------------------------------')
+            continue
    
 def search_events():
     product = input('Enter event type or name: ').replace(' ', '%20')
@@ -1139,7 +1177,7 @@ def search_top_categories():
                 else:
                     print(f"Please enter a number between 1 and {len(categories)}.")
             except ValueError:
-                print("Invalid input. Please enter a number.")
+                print("-------------------------------------\nInvalid input. Please enter a number.\n-------------------------------------")
 
     def generate_slug(category):
         category = category.replace('&', 'and')
@@ -1274,7 +1312,7 @@ def main():
             if leave == 'y':
                 delete_all_files_in_gcs('data-visuals-serving')
                 print("-------------------------------------\nExiting the program\n-------------------------------------.")
-                time.sleep(2)
+                time.sleep(5)
                 sys.exit()
             else:
                 continue
@@ -1282,8 +1320,9 @@ def main():
             collection.delete_many({})
             print('-------------------------------------\nDatabase cleared\n-------------------------------------.')
             main()
+            return
         else:
-            print("\nInvalid choice. Please try again.")
+            print("\n-------------------------------------\nInvalid choice. Please try again.\n-------------------------------------")
 
 
 def display_paginated_events(unique_events, search_key, user_selection, location, day, start_date, end_date, category_slug=None, product=None, page_number=1):
