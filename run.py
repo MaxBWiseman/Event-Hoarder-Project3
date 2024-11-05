@@ -136,7 +136,7 @@ def view_data_files():
     else:
         for url in stored_urls:
             print(url)
-    input('Go back to the main menu? Press Enter to continue.')
+    input('DO NOT USE CTRL-C TO COPY\nGo back to the main menu? Press Enter to continue.')
     main()
 
 
@@ -221,7 +221,7 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
     sheet.title = 'Events Data'
     # Set the title of the sheet to 'Events Data'
     headers = ['Event Name', 'Date', 'Location', 'Price', 'Summary', 'URL', 'Organiser', 'Organiser Link']
-    column_widths = [71, 58, 111, 12, 81, 140]
+    column_widths = [71, 58, 111, 12, 81, 140, 71, 140]
     # Set the column headers and their widths
     
     for col_num, (header, width) in enumerate(zip(headers, column_widths), 1):
