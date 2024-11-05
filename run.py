@@ -1323,6 +1323,7 @@ def main():
             if leave == 'y':
                 delete_all_files_in_gcs('data-visuals-serving')
                 print("Files are being deleted from GCS...")
+                processed_files.clear() # fix for heroku deployment not clearing the GCS bucket
                 time.sleep(3)  # Ensure deletion process has time to complete
                 print("-------------------------------------\nExiting the program\n-------------------------------------.")
                 sys.exit()
