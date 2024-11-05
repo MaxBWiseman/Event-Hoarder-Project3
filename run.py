@@ -1248,7 +1248,7 @@ def display_common_tags(tags_counter):
 def main():
     process_new_files()
     while True:
-        print("-------------------------------------\nWelcome to Event Hoarder!\nSearch for events and they will be automatically be saved to a database so you can\nperform sorting, comparing or filtering tasks, also print to CSV\n-------------------------------------")
+        print("-------------------------------------\nWelcome to Event Hoarder!\nSearch for events and they will be automatically be saved to a database so you \ncan perform sorting, comparing or filtering tasks, also print to Excel or CSV\n-------------------------------------")
         print("\nChoose an option:")
         print("1. Quick Search & Collect")
         print("2. Search & Collect Top Events")
@@ -1274,6 +1274,7 @@ def main():
             if leave == 'y':
                 delete_all_files_in_gcs('data-visuals-serving')
                 print("-------------------------------------\nExiting the program\n-------------------------------------.")
+                time.sleep(2)
                 sys.exit()
             else:
                 continue
