@@ -1316,9 +1316,8 @@ def main():
             if leave == 'y':
                 delete_all_files_in_gcs('data-visuals-serving')
                 print("Files are being deleted from GCS...")
-                time.sleep(5)  # Ensure deletion process has time to complete
+                time.sleep(10)  # Ensure deletion process has time to complete
                 print("-------------------------------------\nExiting the program\n-------------------------------------.")
-                time.sleep(2)
                 sys.exit()
             else:
                 continue
