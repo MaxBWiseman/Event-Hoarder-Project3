@@ -1049,7 +1049,7 @@ def search_events_in_collection():
     
     display_events(all_events, 0, len(all_events), user_selection, search_key=unique_search_keys[int(choice) - 1])
     while True:
-        save_choice = input('-------------------------------------\nWould you like to save the events to a CSV or Excel file? (C/E) or perform tasks on the data? (T): ').strip().lower()
+        save_choice = input('-------------------------------------\nWould you like to save the events to a CSV or Excel file? (C/E)\nOr perform tasks on the data? (T): ').strip().lower()
         if save_choice == 'c':
             try:
                 save_to_csv(all_events)
@@ -1075,7 +1075,7 @@ def view_all_events():
     
     display_events(all_events, 0, len(all_events), user_selection, search_key='None')
     while True:
-        save_choice = input('-------------------------------------\nWould you like to save the events to a CSV or Excel file? (C/E) or perform tasks on the data? (T): ').strip().lower()
+        save_choice = input('-------------------------------------\nWould you like to save the events to a CSV or Excel file? (C/E)\nOr perform tasks on the data? (T): ').strip().lower()
         if save_choice == 'c':
             try:
                 save_to_csv(all_events)
