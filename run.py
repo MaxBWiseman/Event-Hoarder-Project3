@@ -708,7 +708,7 @@ def compare_events(events):
             spinner = Spinner('Processing...')
             spinner.start()
             try:
-                price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
+                price = [extract_price(event.get('event_price', '0')) for event in events if event.get('event_price', 'N/A').lower() not in ['sold out', 'free', 'donation']]
                 # Extract the price from the event_price field for each event, not including 'sold out', 'free', and 'donation' events
                 result = sum(price) / len(price) if price else 0
                 # Calculate the average price of the events, sum the prices and divide by the number of prices
@@ -721,7 +721,7 @@ def compare_events(events):
             spinner = Spinner('Processing...')
             spinner.start()
             try:
-                price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
+                price = [extract_price(event.get('event_price', '0')) for event in events if event.get('event_price', 'N/A').lower() not in ['sold out', 'free', 'donation']]
                 # Extract the price from the event_price field for each event, not including 'sold out', 'free', and 'donation' events
                 if price:
                     price.sort()
@@ -806,7 +806,7 @@ def compare_events(events):
             spinner = Spinner('Processing...')
             spinner.start()
             try:
-                price = [extract_price(event['event_price']) for event in events if event.get('event_price', '').lower() not in ['sold out', 'free', 'donation']]
+                price = [extract_price(event.get('event_price', '0')) for event in events if event.get('event_price', 'N/A').lower() not in ['sold out', 'free', 'donation']]
                 # List comprehension to extract the prices from the events, not including 'sold out', 'free', and 'donation' events, then calling the extract_price function to extract the numeric part of the price
                 plt.hist(price, bins=20, edgecolor='black')
                 # A bin is a range of values that is used to group the data, the bins argument specifies the number of bins to use, the edgecolor argument specifies the color of the edges of the bars

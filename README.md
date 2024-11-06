@@ -66,6 +66,7 @@ Graph visualizations are generated with the help from the matplotlib.pyplot libr
 - Implement a graphical user interface (GUI) for easier interaction.
 - Enhance data analysis capabilities with more sophisticated algorithms.
 - Include sorting/comapring by organizers
+- Utilize the event tags more than counting most common, e.g filter/compare by tags
 
 ## Testing
 
@@ -131,4 +132,4 @@ Special thanks to Eventbrite for allowing scraping.
 
 ### More words from developer
 
-This project is a labor of love (1392 lines) and a testament to the power of data. I hope it brings value to users and inspires further exploration in the world of event data analysis.
+This project is a labor of love (1396 lines) and a testament to the power of data. I hope it brings value to users and inspires further exploration in the world of event data analysis.
