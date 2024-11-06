@@ -35,6 +35,23 @@ with open('/tmp/service_account.json', 'w') as f:
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/tmp/service_account.json'
 # Use the decoded credentials to authenticate with Google Cloud
 
+# Hashtable to cache recently searched events
+cache = {}
+
+uri = os.getenv('MONGO_URI')
+# Create a new client and connect to the server
+client = MongoClient(uri, server_api=ServerApi('1'))
+# Send a ping to confirm a successful connection
+try:
+    client.admin.command('ping')
+    print("Pinged your deployment. You successfully connected to MongoDB!")
+except Exception as e:
+    print(e)
+    
+db = client['Event_Hoarder']
+collection = db['Event_Data']
+# MongoDB database and collection
+
 # Directory to save Excel and CSV files
 UPLOAD_FOLDER = 'data_visuals'
 if not os.path.exists(UPLOAD_FOLDER):
@@ -42,6 +59,31 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 stored_urls = []
 processed_files = set()
+
+def save_processed_files():
+    processed_files_list = list(processed_files)
+    # Convert the set to a list
+    collection.update_one(
+        {'_id': 'processed_files'},
+        {'$set': {'files': processed_files_list}},
+        upsert=True
+        # Update the processed_files data in the mongodb with the list of processed files, upsert=True creates a new document if it does not exist
+    )
+
+
+def load_processed_files():
+    global processed_files
+    # Global keyword allows the processed_files variable to be accessed and modified outside the function
+    document = collection.find_one({'_id': 'processed_files'})
+    # Find the document with the id 'processed_files'
+    if document:
+        processed_files = set(document['files'])
+        # If the document exists, set the processed_files set to the files in the document
+    else:
+        processed_files = set()
+        # If the document does not exist, set the processed_files set to an empty set
+
+load_processed_files()
 
 def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
     storage_client = storage.Client()
@@ -71,7 +113,7 @@ def process_new_files():
             # If file does not exist in the processed_files set, upload the file to Google Cloud Storage
             processed_files.add(file)
             # Add the file to the processed_files set to avoid re-uploading the same file
-
+    save_processed_files()
 
 def delete_all_files_in_gcs(bucket_name):
     storage_client = storage.Client()
@@ -90,6 +132,8 @@ def delete_all_files_in_gcs(bucket_name):
     else:
         print('Some files could not be deleted.')
 
+    processed_files.clear()
+    save_processed_files()
 
 class Spinner:
     def __init__(self, message='Loading...'):
@@ -120,22 +164,6 @@ class Spinner:
         sys.stdout.write('\r' + ' ' * (len(self.message) + 2) + '\r')
 # Clean up the spinner by overwriting it with spaces and moving the cursor back to the beginning of the line.
         sys.stdout.flush()
-
-# Hashtable to cache recently searched events
-cache = {}
-
-uri = os.getenv('MONGO_URI')
-# Create a new client and connect to the server
-client = MongoClient(uri, server_api=ServerApi('1'))
-# Send a ping to confirm a successful connection
-try:
-    client.admin.command('ping')
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
-    
-db = client['Event_Hoarder']
-collection = db['Event_Data']
 
 
 def view_data_files():
@@ -1322,8 +1350,6 @@ def main():
             leave = input("Are you sure you want to exit? Exiting will delete any files you may have made.\nBe sure to view/download them first! (Y/N): ").strip().lower()
             if leave == 'y':
                 delete_all_files_in_gcs('data-visuals-serving')
-                print("Files are being deleted from GCS...")
-                processed_files.clear() # fix for heroku deployment not clearing the GCS bucket
                 time.sleep(3)  # Ensure deletion process has time to complete
                 print("-------------------------------------\nExiting the program\n-------------------------------------.")
                 sys.exit()
