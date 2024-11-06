@@ -245,7 +245,7 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
         sheet[f'E{row_num}'] = event.get('summary', 'N/A')
         sheet[f'F{row_num}'] = event.get('url', 'N/A')
         sheet[f'G{row_num}'] = event.get('event_organiser_name', 'N/A')
-        sheet[f'I{row_num}'] = event.get('event_organiser_link', 'N/A')
+        sheet[f'H{row_num}'] = event.get('event_organiser_link', 'N/A')
     
     workbook.save(filename)
     print(f"\n-------------------------------------\nEvents saved to {filename}, download/view from the main menu.\n-------------------------------------")
@@ -1061,11 +1061,13 @@ def search_events_in_collection():
         if save_choice == 'c':
             try:
                 save_to_csv(all_events)
+                return
             except Exception as e:
                 print(f"Error saving events to CSV: {e}")
         elif save_choice == 'e':
             try:
                 save_to_excel(all_events)
+                return
             except Exception as e:
                 print(f"Error saving events to Excel: {e}")
         elif save_choice == 't':
@@ -1087,11 +1089,13 @@ def view_all_events():
         if save_choice == 'c':
             try:
                 save_to_csv(all_events)
+                return
             except Exception as e:
                 print(f"Error saving events to CSV: {e}")
         elif save_choice == 'e':
             try:
                 save_to_excel(all_events)
+                return
             except Exception as e:
                 print(f"Error saving events to Excel: {e}")
         elif save_choice == 't':

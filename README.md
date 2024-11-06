@@ -1,6 +1,6 @@
 # Event-Hoarder | Event Scraper & Data Analyzer
 
-![Event-Hoarder-Project3](https://socialify.git.ci/MaxBWiseman/Event-Hoarder-Project3/image?description=1&font=Source%20Code%20Pro&language=1&name=1&owner=1&pattern=Circuit%20Board&stargazers=1&theme=Dark)
+![Event-Hoarder-Project3](https://socialify.git.ci/MaxBWiseman/Event-Hoarder-Project3/image?description=1&descriptionEditable=My%20project3%20for%20code%20institute.%20Scrape%20event%20data%20as%20you%20search%20and%20perform%20various%20sorting%20or%20comparing%20tasks&font=Source%20Code%20Pro&language=1&name=1&owner=1&pattern=Circuit%20Board&stargazers=1&theme=Dark)
 
 ## Contents
 * [Main Blurb](#main-blurb)
