@@ -781,7 +781,7 @@ def compare_events(events):
             spinner = Spinner('Processing...')
             spinner.start()
             try:
-                event_days = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%d') for event in events]
+                event_days = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%d') for event in events if event.get('event_date_time', 'N/A') != 'N/A']
                 # List comprehension to extract the day and year from the event_date_time field for each event, the date is expected to be in the format 'YYYY-MM-DD HH:MM:SS' and is parsed to a datetime object.
                 # The second argument formats the datetime object to 'YYYY-DD' to be used to group the events by day
                 days_counts = Counter(event_days)
@@ -810,7 +810,7 @@ def compare_events(events):
             spinner = Spinner('Processing...')
             spinner.start()
             try:
-                event_months = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m') for event in events]
+                event_months = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m') for event in events if event.get('event_date_time', 'N/A') != 'N/A']
                 # List comprehension to extract the month and year from the event_date_time field for each event, the date is expected to be in the format 'YYYY-MM-DD HH:MM:SS' and is parsed to a datetime object.
                 # The second argument formats the datetime object to 'YYYY-MM' to be used to group the events by month
                 months_counts = Counter(event_months)
