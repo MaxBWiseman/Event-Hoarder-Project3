@@ -1,6 +1,6 @@
 # Event-Hoarder | Event Scraper & Data Analyzer
 
-Total time on this project - [![wakatime](https://wakatime.com/badge/user/d85da0fd-b442-4c33-98af-3ef622520fc1/project/f81d0cfe-3087-4a21-9af3-11a447be493b.svg)](https://wakatime.com/badge/user/d85da0fd-b442-4c33-98af-3ef622520fc1/project/f81d0cfe-3087-4a21-9af3-11a447be493b)
+![Event-Hoarder-Project3](https://socialify.git.ci/MaxBWiseman/Event-Hoarder-Project3/image?description=1&font=Source%20Code%20Pro&language=1&name=1&owner=1&pattern=Circuit%20Board&stargazers=1&theme=Dark)
 
 ## Contents
 * [Main Blurb](#main-blurb)
@@ -37,6 +37,8 @@ This project is led with the idea of collecting event data as you search, saved 
   - Event dates over time
 
 You may scrape for events by specific dates and top event categories, or just search for top events in your area.
+
+Total time on this project - [![wakatime](https://wakatime.com/badge/user/d85da0fd-b442-4c33-98af-3ef622520fc1/project/f81d0cfe-3087-4a21-9af3-11a447be493b.svg)](https://wakatime.com/badge/user/d85da0fd-b442-4c33-98af-3ef622520fc1/project/f81d0cfe-3087-4a21-9af3-11a447be493b)
 
 ## Target Audience
 
