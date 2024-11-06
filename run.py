@@ -194,7 +194,7 @@ def save_to_csv(events):
     
     fields = ['name', 'location', 'show_date_time', 'event_price', 'summary', 'url', 'event_organiser_name', 'event_organiser_link']
 
-    with open(file_name, 'a', newline='') as file:
+    with open(file_name, 'a', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=fields)
 
         if not file_exists:

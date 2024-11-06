@@ -9,6 +9,7 @@
 * [Design Choices](#design-choices)
 * [Features](#features)
     * [Future Implementations](#future-implementations)
+* [Images](#project-images)
 * [Testing](#testing)
 * [Languages](#languages-that-were-used-for-this-project)
     * [Other Libraries Used](#other-libraries-used)
@@ -67,6 +68,61 @@ Graph visualizations are generated with the help from the matplotlib.pyplot libr
 - Enhance data analysis capabilities with more sophisticated algorithms.
 - Include sorting/comapring by organizers
 - Utilize the event tags more than counting most common, e.g filter/compare by tags
+
+## Images
+
+### Menu
+
+![main menu](images/ss1.png)
+
+### Quick Searching
+
+![quick search](images/ss2.png)
+
+### Events List
+
+![A list of events](images/ss3.png)
+
+### More Events
+
+![list of more events](images/ss4.png)
+![list of more events](images/ss5.png)
+
+### Top Category's Search
+
+![top event category search](images/categoryss1.png)
+![top event category search](images/categoryss2.png)
+
+### Recent Searches
+
+![recent searches](images/recentsearchss1.png)
+
+### Save Events or Perform Tasks
+
+![save events or perform data tasks](images/saveeventss1.png)
+
+### Sort Events
+
+![sort events](images/sorteventsss1.png)
+
+### Compare Events
+
+![compare events](images/compareeventsss1.png)
+
+### View File Links
+
+![view user generated file links](images/viewfilelinkss1.png)
+
+### Data Visualizations
+
+![a graph showing events by day](images/datavis1.png)
+![a graph showing events over time](images/datavis2.png)
+![a graph showing event price distibution](images/datavis3.png)
+
+### Excel Event Data Export
+
+![event data exported to excel](images/excelexportss1.png)
+
 
 ## Testing
 
