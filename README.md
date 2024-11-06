@@ -9,7 +9,7 @@
 * [Design Choices](#design-choices)
 * [Features](#features)
     * [Future Implementations](#future-implementations)
-* [Images](#project-images)
+* [Images](#images)
 * [Testing](#testing)
 * [Languages](#languages-that-were-used-for-this-project)
     * [Other Libraries Used](#other-libraries-used)
