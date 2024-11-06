@@ -60,31 +60,6 @@ if not os.path.exists(UPLOAD_FOLDER):
 stored_urls = []
 processed_files = set()
 
-def save_processed_files():
-    processed_files_list = list(processed_files)
-    # Convert the set to a list
-    collection.update_one(
-        {'_id': 'processed_files'},
-        {'$set': {'files': processed_files_list}},
-        upsert=True
-        # Update the processed_files data in the mongodb with the list of processed files, upsert=True creates a new document if it does not exist
-    )
-
-
-def load_processed_files():
-    global processed_files
-    # Global keyword allows the processed_files variable to be accessed and modified outside the function
-    document = collection.find_one({'_id': 'processed_files'})
-    # Find the document with the id 'processed_files'
-    if document:
-        processed_files = set(document['files'])
-        # If the document exists, set the processed_files set to the files in the document
-    else:
-        processed_files = set()
-        # If the document does not exist, set the processed_files set to an empty set
-
-load_processed_files()
-
 def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
     storage_client = storage.Client()
     # Create a new client
@@ -101,19 +76,6 @@ def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
     # Append the URL to the stored_urls list for viewing
     return url
 
-
-def process_new_files():
-    files = os.listdir(UPLOAD_FOLDER)
-    # List all files in the UPLOAD_FOLDER directory (data_visuals)
-    for file in files:
-        if file not in processed_files:
-            file_path = os.path.join(UPLOAD_FOLDER, file)
-            # Join the file name with the directory path, example: 'data_visuals/event_count_per_day.png'
-            upload_to_gcs('data-visuals-serving', file_path, file)
-            # If file does not exist in the processed_files set, upload the file to Google Cloud Storage
-            processed_files.add(file)
-            # Add the file to the processed_files set to avoid re-uploading the same file
-    save_processed_files()
 
 def delete_all_files_in_gcs(bucket_name):
     storage_client = storage.Client()
@@ -133,7 +95,7 @@ def delete_all_files_in_gcs(bucket_name):
         print('Some files could not be deleted.')
 
     processed_files.clear()
-    save_processed_files()
+
 
 class Spinner:
     def __init__(self, message='Loading...'):
@@ -246,6 +208,8 @@ def save_to_csv(events):
             writer.writerow(filtered_event)
 
     print(f"\n-------------------------------------\nEvents saved to {file_name}, download/view from the main menu.\n-------------------------------------")
+    upload_to_gcs('data-visuals-serving', file_name, os.path.basename(file_name))
+    # os.path.basename() example: 'data_visuals/collected_events.csv' -> 'collected_events.csv'
     return
 
 
@@ -285,6 +249,7 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
     
     workbook.save(filename)
     print(f"\n-------------------------------------\nEvents saved to {filename}, download/view from the main menu.\n-------------------------------------")
+    upload_to_gcs('data-visuals-serving', filename, os.path.basename(filename))
     return
 
 
@@ -803,6 +768,7 @@ def compare_events(events):
                 plt.savefig(image_path)
                 # Save the plot as an image
                 plt.close()
+                upload_to_gcs('data-visuals-serving', image_path, os.path.basename(image_path))
                 print(f'\n-------------------------------------\nEvent count per day saved as {image_path}, download/view from the main menu.\n-------------------------------------')
             finally:
                 spinner.stop()
@@ -832,6 +798,7 @@ def compare_events(events):
                 plt.savefig(image_path)
                 # Save the plot as an image
                 plt.close()
+                upload_to_gcs('data-visuals-serving', image_path, os.path.basename(image_path))
                 print(f'\n-------------------------------------\nEvent count per month saved as {image_path}, download/view from the main menu.\n-------------------------------------')
             finally:
                 spinner.stop()
@@ -850,6 +817,7 @@ def compare_events(events):
                 image_path = check_file_unique(image_path)
                 plt.savefig(image_path)
                 plt.close()
+                upload_to_gcs('data-visuals-serving', image_path, os.path.basename(image_path))
                 print(f'\n-------------------------------------\nEvent price distribution saved as {image_path}, download/view from the main menu.\n-------------------------------------')
             finally:
                 spinner.stop()
@@ -877,6 +845,7 @@ def compare_events(events):
                 image_path = check_file_unique(image_path)
                 plt.savefig(image_path)
                 plt.close()
+                upload_to_gcs('data-visuals-serving', image_path, os.path.basename(image_path))
                 print(f'\n-------------------------------------\nEvent dates over time saved as {image_path}, download/view from the main menu.\n-------------------------------------')
             finally:
                 spinner.stop()
@@ -1323,7 +1292,6 @@ def display_common_tags(tags_counter):
 
 
 def main():
-    process_new_files()
     while True:
         print("-------------------------------------\nWelcome to Event Hoarder!\nSearch for events and they will be automatically be saved to a database so you \ncan perform sorting, comparing or filtering tasks, also print to Excel or CSV\n-------------------------------------")
         print("\nChoose an option:")
@@ -1373,7 +1341,9 @@ def display_paginated_events(unique_events, search_key, user_selection, location
 
     while more_events_check:
         start_index = current_page * page_size
+        # The start index is the current page number multiplied by the page size (number of events per console page)
         end_index = min(start_index + page_size, total_events)
+        # The end index is the minimum of the start index plus the page size and the total number of events
         display_events(unique_events, start_index, end_index, user_selection, search_key)
 
         if end_index >= total_events:
@@ -1393,8 +1363,11 @@ def display_paginated_events(unique_events, search_key, user_selection, location
                 
                 print(f'Fetched {len(events_data)} events for page number: {page_number} ')
                 unique_events.extend(events_data)
+                # Add the new events to the unique events list
                 tags_counter.update(new_tags_counter)
+                # Update the tags counter with the new tags
                 total_events = len(unique_events)
+                # Update the total number of events
                 print(f'Total events after fetching: {total_events}')
                 # Display the most common tags
                 display_common_tags(tags_counter)
