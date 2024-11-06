@@ -825,7 +825,7 @@ def compare_events(events):
             spinner = Spinner('Processing...')
             spinner.start()
             try:
-                event_dates = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').date() for event in events]
+                event_dates = [datetime.strptime(event['event_date_time'], '%Y-%m-%d %H:%M:%S').date() for event in events if event.get('event_date_time', 'N/A') != 'N/A']
                 # Grab all the event dates from the event_date_time field, parse the date and time to a datetime object, then extract the date
                 date_counts = Counter(event_dates)
                 # Count each occurrence of the different dates
