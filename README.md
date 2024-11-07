@@ -187,7 +187,7 @@ takes alot of word replacements to turn a user friendly date into something less
 
 ### Scraping event price
 
-- 
+- Scraping the event price was a challenge as I needed to extract the price from other strings and currency symbols,
 
 
 

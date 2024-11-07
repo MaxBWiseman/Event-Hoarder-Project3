@@ -657,8 +657,8 @@ def collection_menu():
         else:
             print("\n-------------------------------------\nInvalid choice. Please try again.\n-------------------------------------")
 
-# This function was built with help from Co-Pilot when asked how could i extract the price from the event_price field
-# Its suggestion was the re module. As i needed to remove other strings and currency symbols from the event_price field
+# This function was built with help from Co-Pilot when asked how could I extract the price from the event_price field
+# Its suggestion was the re module. As I needed to remove other strings and currency symbols from the event_price field
 def extract_price(price_str):
     # Use regular expression to find the first occurrence of a number in the string
     match = re.search(r'\d+(\.\d+)?', price_str)
