@@ -18,6 +18,9 @@
     * [Date Scraping & Parsing](#date-scraping--parsing)
     * [Event Location Scraping](#event-location-scraping)
     * [Using Scraped Event Price for Data Analysis](#using-scraped-event-price-for-data-analysis)
+* [My Algorithm's](#my-algorithms)
+    * [My Compare Algorithm](#my-compare-algorithm)
+    * [My Sort Algorithm](#my-sort-algorithm)
 * [Languages](#languages-that-were-used-for-this-project)
     * [Other Libraries Used](#other-libraries-used)
 * [Deployment](#deployment)
@@ -198,7 +201,7 @@ takes alot of word replacements to turn a user friendly date into something less
 ![alt text](images/extractpricesss2.png)
 
 
-# My Algorithms
+# My Algorithm's
 
 ## My compare algorithm
 ![alt text](images/compareeventsfuncss1.png)
