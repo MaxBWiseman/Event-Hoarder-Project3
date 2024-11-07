@@ -11,6 +11,9 @@
     * [Future Implementations](#future-implementations)
 * [Images](#images)
 * [Testing](#testing)
+    * [Testing Features](#testing-features)
+    * [Testing UI](#testing-ui)
+    * [User Testing](#user-testing)
 * [Languages](#languages-that-were-used-for-this-project)
     * [Other Libraries Used](#other-libraries-used)
 * [Deployment](#deployment)
@@ -127,6 +130,67 @@ Graph visualizations are generated with the help from the matplotlib.pyplot libr
 ## Testing
 
 Thorough manual testing was conducted to ensure the reliability and accuracy of the data scraping, storage, menu's and analysis processes.
+
+The python in this program was validated on the 7/11/2024 with pythonium.net/linter - 
+
+![alt text](images/pythonvalidation.png)
+
+### Testing features
+
+| Test |Outcome  |
+|--|--|
+|Scraping events | Pass |
+|Scraping top events | Pass|
+|Scraping top categories | Pass|
+|MongoDB storage | Pass|
+|GCS | Pass|
+|Event sorting |Pass|
+|Event comparing |Pass|
+|Export to CSV |Pass|
+|Export to Excel |Pass|
+|Generate data visualizations |Pass|
+
+### Testing UI
+
+| Test |Outcome  |
+|--|--|
+|Interface user error handling |Pass |
+|Interface display |Pass  
+
+### User testing
+
+#### I let my Mum have a go and found that - 
+
+| Test | Result |
+|--|--|
+|Interface navigated easily after one use| 100%|
+|Was able to perform data tasks on her scraped events| 100%|
+|Was able to recognise where links for user generated CSV/Excel and visualizations are provided |100%  |
+
+## Encountered Bugs
+
+### Date scraping & parsing
+
+- I had a few issues with scraping and parsing dates from events, turning a date that looks like 'Thursday, November 7 - 12:30 - 2:30pm GMT' into something more workable like '2024-11-7 12:30:00'
+takes alot of word replacements to turn a user friendly date into something less friendley for the user, but better to understand for a computer using the inbuilt datetime library. You have to keep in mind about user mistakes, I have had to include error handling for dates having 2 stated months instead on one, and dates that dont exist (e.g. Nov 31). I also removed all days from the date string as these are not needed and replaced all months with their short abbrievations (January, Febuary => Jan, Feb), also filter out all special characters (-, +1, GMT, PM, AM ). Also for cases where date ranges are entered by the user, I only take the first date in this case.
+
+#### Code Example
+![alt text](images/parsescrapeddatess1.png)
+![alt text](images/parsescrapeddatess2.png)
+
+### Event location scraping
+
+- I had an issue with the string 'Show map' appearing after all of the events locations, probably due to how Eventbrite shows its users map locations. This looked unproffessional to keep there and quickly found out that using .replace() wouldent work as this string is preceeded the date, example 'United KingdomShow map', after being stuck on this for a while i asked Co-Pilot for a solution and it suggested to use the 're' library (regular expressions). 'r'Show map$' is a regular expression pattern where 'Show map' is the literal string to match and '$' asserts the position at the end of the string, making sure that 'Show map' is only removed if it appears at the end of 'event_location'
+
+#### Code Example
+![alt text](images/eventlocationscrapingss1.png)
+
+### Scraping event price
+
+- 
+
+
+
 
 ## Languages that were used for this project
 
