@@ -752,8 +752,8 @@ def compare_events(events):
                 days_counts = Counter(event_days)
                 # Use the Counter class to count the occurrences of each day, works by setting a dictionary key with each collected day and incrementing the value each time the day is found
                 days, counts = zip(*sorted(days_counts.items()))
-                # Take the dictionary days_counts and retrieve its items as a list of tuples with items(), then sort the tuples by the keys (days) sorted(), take the sorted list of tuples and unpacks them into two lists, one for keys and one for values zip(*).
-                # the splat operator * allowed zip() to take the list of tuples and unpack them into two separate lists, without it zip() would return one list of tuples
+                # Take the dictionary days_counts and retrieve its items as a list of tuples with items(), then sort the tuples by the keys (days) sorted(), take the sorted list of tuples and unpacks them into two lists,
+                # one for keys and one for values zip(*). The splat operator * allowed zip() to take the list of tuples and unpack them into two separate lists, without it zip() would return one list of tuples
                 plt.bar(days, counts)
                 # Create a bar chart with the days on the x-axis and the counts on the y-axis
                 plt.title('Events By Day')
@@ -782,8 +782,8 @@ def compare_events(events):
                 months_counts = Counter(event_months)
                 # Use the Counter class to count the occurrences of each month, works by setting a dictionary key with each collected month and incrementing the value each time the month is found
                 months, counts = zip(*sorted(months_counts.items()))
-                # Take the dictionary months_counts and retrieve its items as a list of tuples with items(), then sort the tuples by the keys (months) sorted(), take the sorted list of tuples and unpacks them into two lists, one for keys and one for values zip(*).
-                # the splat operator * allowed zip() to take the list of tuples and unpack them into two separate lists, without it zip() would return one list of tuples
+                # Take the dictionary months_counts and retrieve its items as a list of tuples with items(), then sort the tuples by the keys (months) sorted(), take the sorted list of tuples and unpacks them into two lists,
+                # one for keys and one for values zip(*). The splat operator * allowed zip() to take the list of tuples and unpack them into two separate lists, without it zip() would return one list of tuples
                 plt.bar(months, counts)
                 # Create a bar chart with the months on the x-axis and the counts on the y-axis
                 plt.title('Events By Month')
@@ -968,7 +968,8 @@ def sort_events(events):
                 spinner.start()
                 api_key = os.getenv('GOOGLE_MAPS_API_KEY')
                 closest_events = find_closest_events(user_location, events, api_key)
-                # This is calculated using the geopy library's geodesic function, which calculates the distance between two points on the Earth's surface using the geodesic distance, which is more accurate than the haversine formula
+                # This is calculated using the geopy library's geodesic function, which calculates the distance between two points on the Earth's surface using the geodesic distance,
+                # which is more accurate than the haversine formula
                 if closest_events:
                     display_events(closest_events, 0, len(closest_events), 'data-manipulation', 'None')
                 else:

@@ -14,6 +14,10 @@
     * [Testing Features](#testing-features)
     * [Testing UI](#testing-ui)
     * [User Testing](#user-testing)
+* [Encountered Bugs](#encountered-bugs)
+    * [Date Scraping & Parsing](#date-scraping--parsing)
+    * [Event Location Scraping](#event-location-scraping)
+    * [Using Scraped Event Price for Data Analysis](#using-scraped-event-price-for-data-analysis)
 * [Languages](#languages-that-were-used-for-this-project)
     * [Other Libraries Used](#other-libraries-used)
 * [Deployment](#deployment)
@@ -185,11 +189,26 @@ takes alot of word replacements to turn a user friendly date into something less
 #### Code Example
 ![alt text](images/eventlocationscrapingss1.png)
 
-### Scraping event price
+### Using scraped event price for data analysis
 
-- Scraping the event price was a challenge as I needed to extract the price from other strings and currency symbols,
+- Using the Scraped event price for data analysis was a challenge as I needed to extract the price from other strings and currency symbols and the re library uses alot of different special characters and symbols to achieve your desired affect. I asked Co-Pilot for advice on this and it suggested I should use 'r'\d+(\.\d+)?' as my 're.search()' argument, this seemed like an almost random set of characters but what is means is to match one or more digits followed by an optional decimal point and one or more digits, this essentially finds the first occurrence of a number in the event_price string. If a number is found, it is converted to a float and returned, if no number is found, 0.0 is returned.
+
+#### Code Example
+![alt text](images/extractpricess1.png)
+![alt text](images/extractpricesss2.png)
 
 
+# My Algorithms
+
+## My compare algorithm
+![alt text](images/compareeventsfuncss1.png)
+![alt text](images/compareeventsfuncss2.png)
+![alt text](images/compareeventsfuncss3.png)
+![alt text](images/compareeventsfuncss4.png)
+
+## My sort algorithm
+![alt text](images/sorteventsfuncss1.png)
+![alt text](images/sorteventsfuncss2.png)
 
 
 ## Languages that were used for this project
