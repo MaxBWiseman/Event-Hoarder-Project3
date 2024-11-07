@@ -359,7 +359,7 @@ def display_events(events, start_index, end_index, user_selection, search_key):
             summary = data.get('summary', '')
             truncated_summary = summary[:120] + '...' if len(summary) > 120 else summary
             if show_date_time != 'No date and time available':
-                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\n{data["show_date_time"]}\nPrice: {data["event_price"]}\nSummary: {truncated_summary}\nEvent URL: {data["url"]}\nOrganiser: {data['event_organiser_name']}\nOrganiser\'s Link: {data["event_organiser_link"]}\n-------------------------------------')
+                print(f'-------------------------------------\n{data["name"]},\n{data["location"]}\n{data["show_date_time"]}\nPrice: {data["event_price"]}\nSummary: {truncated_summary}\nEvent URL: {data["url"]}\nOrganiser: {data["event_organiser_name"]}\nOrganiser\'s Link: {data["event_organiser_link"]}\n-------------------------------------')
             else:
                 continue # Skip invalid event data
         else:
