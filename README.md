@@ -29,6 +29,8 @@
 * [Credits](#credits)
     * [Creator](#creator)
     * [Media](#media)
+    * [Acknowledgements](#acknowledgements)
+    * [More Words from Developer](#more-words-from-developer)
 
 ## Main Blurb
 This project is led with the idea of collecting event data as you search, saved automatically to a wipeable database, to then perform various data manipulation tasks on this user-collected data, with no request restrictions either. The main data features are:
