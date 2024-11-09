@@ -655,9 +655,12 @@ def scrape_eventbrite_categories(location, category_slug, day,
 
     Returns:
         tuple: A tuple containing:
-            - event_data (list): A list of dictionaries, each representing an event.
-            - tags_counter (Counter): A Counter object counting the occurrences of tags.
-            - more_events_check (bool): A boolean indicating if there are more events to fetch.
+        - event_data (list): A list of dictionaries,
+            each representing an event.
+        - tags_counter (Counter): A Counter object counting
+            the occurrences of tags.
+        - more_events_check (bool): A boolean indicating if
+            there are more events to fetch.
     """
     url = (
         f'https://www.eventbrite.com/d/united-kingdom--{location}/'
