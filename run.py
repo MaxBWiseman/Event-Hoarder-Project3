@@ -170,6 +170,9 @@ class Spinner:
 
 
 def view_data_files():
+    """
+    View files uploaded to Google Cloud Storage from global list stored_urls.
+    """
     if not stored_urls:
         print('\n-------------------------------------\nNo files uploaded yet.\
             \n-------------------------------------')
@@ -183,6 +186,10 @@ def view_data_files():
 
 
 def check_and_delete_old_events():
+    """
+    Check for events in the global collection with start dates that have
+    already passed and delete them.
+    """
     current_date = datetime.now().date()
     events = collection.find({})
 
@@ -208,6 +215,14 @@ check_and_delete_old_events()
 
 
 def save_to_mongodb(search_key, collected_events):
+    """
+    Save user viewed events to MongoDB.
+
+    Args:
+        search_key (string): The phrase the user used to search for events.
+        collected_events (object): The event objects that
+        were viewed and collected.
+    """
     for event in collected_events:
         if isinstance(event, dict):
             unique_id = event.get('url', 'N/A')
@@ -236,6 +251,12 @@ def save_to_mongodb(search_key, collected_events):
 
 
 def save_to_csv(events):
+    """
+    Save events in the mongodb collection to a CSV file.
+
+    Args:
+        events (object): Event objects to save to the CSV file.
+    """
     directory = 'data_visuals'
     file_name = os.path.join(directory, 'collected_events.csv')
     file_exists = os.path.exists(file_name)
@@ -271,6 +292,13 @@ def save_to_csv(events):
 
 
 def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
+    """
+    Save events in the mongodb collection to an Excel file.
+
+    Args:
+        events (object): Event objects to save to the Excel file.
+        filename (str, optional): Defaults to 'data_visuals/events_data.xlsx'.
+    """
     filename = check_file_unique(filename)
     workbook = openpyxl.Workbook()
     # Create a new Excel workbook
@@ -285,6 +313,9 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
     # Set the column headers and their widths
 
     for col_num, (header, width) in enumerate(zip(headers, column_widths), 1):
+        # for every col_num and its corresponding header and width, enumerate
+        # will return the index and value of each column, and then associate
+        # the declared headers and column_widths stated above with the index
         col_letter = get_column_letter(col_num)
         # get_column_letter() is a built in function from openpyxl that
         # returns the letter of the specified column,
@@ -315,6 +346,16 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
 
 
 def parsed_scraped_date(date_time):
+    """
+    Turn the user friendley (readable) event date and time into a
+    computer readable datetime object.
+
+    Args:
+        date_time (string): User friendly date and time string.
+
+    Returns:
+        object: A date_time object in the format '%Y-%m-%d %H:%M:%S'.
+    """
     if 'No date and time available' in date_time or not date_time.strip():
         return 'N/A'
     # If the date_time is not available, return 'N/A'
@@ -415,6 +456,19 @@ def parsed_scraped_date(date_time):
 
 
 def display_events(events, start_index, end_index, user_selection, search_key):
+    """
+    Display events to the user in a readable, friendley format.
+
+    Args:
+        events (object): Scraped event data.
+        start_index (interger): The start index of the events to display.
+        end_index (interger): The end index of the events to display.
+        user_selection (string): A backend string to determine what to do
+        search_key (string): The phrase the user used to search for events.
+
+    Returns:
+        List of objects: The events displayed to the user.
+    """
     collected_events = events[start_index:end_index]
     for data in collected_events:
         if isinstance(data, dict):
@@ -450,6 +504,31 @@ def display_events(events, start_index, end_index, user_selection, search_key):
 
 def scrape_eventbrite_events(location, day, product, page_number,
                              start_date, end_date):
+    """
+    Scrape events from Eventbrite using a quick search.
+
+    Args:
+        location (string): The users given location. (optional)
+
+        day (string): A string representing eg. 'today',
+        'tomorrow', 'this-weekend'. (optional)
+
+        product (string): The type of event the user is looking for. (optional)
+
+        page_number (interger): The page number of the search
+        results for backend
+
+        start_date (string): The users given date to start
+        the search from. (optional)
+
+        end_date (string): The users given date to end the search. (optional)
+
+    Returns:
+        tuple: A tuple containing:
+            - event_data (list): A list of dictionaries, each representing an event.
+            - tags_counter (Counter): A Counter object counting the occurrences of tags.
+            - more_events_check (bool): A boolean indicating if there are more events to fetch.
+    """
     url = (
         f'https://www.eventbrite.com/d/united-kingdom--{location}/events--'
         f'{day}/{product}/?page={page_number}&start_date={start_date}&end_date'
@@ -555,6 +634,31 @@ def scrape_eventbrite_events(location, day, product, page_number,
 
 def scrape_eventbrite_categories(location, category_slug, day,
                                  page_number, start_date, end_date):
+    """
+    Scrape events from Eventbrite using a set category search.
+
+    Args:
+        location (string): The users given location. (optional)
+
+        day (string): A string representing eg. 'today',
+        'tomorrow', 'this-weekend'. (optional)
+
+        product (string): The type of event the user is looking for. (optional)
+
+        page_number (interger): The page number of the search
+        results for backend
+
+        start_date (string): The users given date to start
+        the search from. (optional)
+
+        end_date (string): The users given date to end the search. (optional)
+
+    Returns:
+        tuple: A tuple containing:
+            - event_data (list): A list of dictionaries, each representing an event.
+            - tags_counter (Counter): A Counter object counting the occurrences of tags.
+            - more_events_check (bool): A boolean indicating if there are more events to fetch.
+    """
     url = (
         f'https://www.eventbrite.com/d/united-kingdom--{location}/'
         f'{category_slug}--events--{day}/?page={page_number}&start_date='
