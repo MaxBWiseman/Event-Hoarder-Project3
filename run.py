@@ -1,34 +1,34 @@
+import base64
+import calendar
 import csv
+import itertools
+import math
 import os
-import requests
-from bs4 import BeautifulSoup
+import re
+import sys
+import threading
+import time
 from collections import Counter
 from datetime import datetime
-import itertools
-import threading
-import calendar
-import sys
-import time
-import re
-import base64
-import math
 import matplotlib.pyplot as plt
 import openpyxl
-from openpyxl.utils import get_column_letter
+import requests
+from bs4 import BeautifulSoup
 from dateutil import parser
+from dotenv import load_dotenv
+from geopy.distance import geodesic
+from google.cloud import storage
+from openpyxl.utils import get_column_letter
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
-from geopy.distance import geodesic
-from dotenv import load_dotenv
-from google.cloud import storage
-
+from pymongo.errors import ConnectionFailure, OperationFailure
 
 load_dotenv()
 encoded_json = os.getenv('GOOGLE_CREDENTIALS')
 decoded_json = base64.b64decode(encoded_json).decode()
 # Decode the required credentials from the environment variable
 
-with open('/tmp/service_account.json', 'w') as f:
+with open('/tmp/service_account.json', 'w', encoding='utf-8') as f:
     f.write(decoded_json)
     # Write the decoded credentials to a JSON file
 
@@ -45,9 +45,11 @@ client = MongoClient(uri, server_api=ServerApi('1'))
 try:
     client.admin.command('ping')
     print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
-    
+except ConnectionFailure as e:
+    print(f'Connection error: {e}')
+except OperationFailure as e:
+    print(f'Operation failure: {e}')
+
 db = client['Event_Hoarder']
 collection = db['Event_Data']
 # MongoDB database and collection
@@ -62,6 +64,17 @@ processed_files = set()
 
 
 def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
+    """
+    Uploads a file to a googlle cloud storage bucket.
+
+    Args:
+        bucket_name (str): Name of the GCS bucket
+        source_file_name (str): The path to file for upload
+        destination_blob_name (str): Name of the file sent to GCS
+
+    Returns:
+        str: Public GCS URL of the uploaded file
+    """
     storage_client = storage.Client()
     # Create a new client
     bucket = storage_client.bucket(bucket_name)
@@ -79,15 +92,21 @@ def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
 
 
 def delete_all_files_in_gcs(bucket_name):
+    """
+    Removes all files from a Google Cloud Storage bucket.
+
+    Args:
+        bucket_name (str): The name of the GCS bucket to delete files from.
+    """
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blobs = bucket.list_blobs()
-    
+
     # List all blobs in the bucket
     for blob in blobs:
         blob.delete()
         print(f"Deleted {blob.name}")
-    
+
     # Confirm all blobs are deleted
     remaining_blobs = list(bucket.list_blobs())
     if not remaining_blobs:
@@ -99,37 +118,54 @@ def delete_all_files_in_gcs(bucket_name):
 
 
 class Spinner:
+    """
+    A class to create a spinner (loader) that runs in a separate thread.
+    """
     def __init__(self, message='Loading...'):
+        """
+        Initializes the Spinner object with a message and a spinner.
+
+        Args:
+            message (str, optional): Defaults to 'Loading...'.
+        """
         self.message = message
         self.spinner = itertools.cycle(['|', '/', '-', '\\'])
         self.stop_running = threading.Event()
 # This sets up the message and spinner, and creates a stop_running event that
 # will be used to stop the spinner.
-        
+
     def start(self):
+        """
+        This starts a new thread that will run the _spin method.
+        """
         threading.Thread(target=self._spin).start()
-# This starts a new thread that will run the _spin method.
-    
+
     def _spin(self):
+        """
+        This method will run as long as stop_running event is not set.
+        """
         while not self.stop_running.is_set():
             # This method will run as long as stop_running event is not set.
             sys.stdout.write(f'\r{self.message} {next(self.spinner)}')
-# \r is a carriage return, which moves the cursor to the beginning of the line.
-# This allows the spinner to overwrite itself on the same line,
-# next(self.spinner) gets the next character in the spinner.
+            # \r is a carriage return, which moves the cursor to the beginning
+            # of the line. This allows the spinner to overwrite itself on the
+            # same line, next(self.spinner) gets next character in the spinner.
             sys.stdout.flush()
-# Immediately flushes to the console to show the spinner.
+            # Immediately flushes to the console to show the spinner.
             time.sleep(0.1)
             sys.stdout.write('\b')
-# \b is a backspace, which moves the cursor back one character
-# so a new character can be written.
-    
+            # \b is a backspace, which moves the cursor back one character
+            # so a new character can be written.
+
     def stop(self):
+        """
+        This method sets the stop_running event, which will stop the spinner.
+        """
         self.stop_running.set()
-# Thread is stopped
+        # Thread is stopped
         sys.stdout.write('\r' + ' ' * (len(self.message) + 2) + '\r')
-# Clean up the spinner by overwriting it with spaces and moving the cursor
-# back to the beginning of the line.
+        # Clean up the spinner by overwriting it with spaces and
+        # moving the cursor back to the beginning of the line.
         sys.stdout.flush()
 
 
@@ -149,21 +185,21 @@ def view_data_files():
 def check_and_delete_old_events():
     current_date = datetime.now().date()
     events = collection.find({})
-    
+
     for event in events:
         unique_id = event.get('url', 'N/A')
         if unique_id == 'N/A':
             continue
-        
+
         start_date = event.get('event_date_time', 'N/A')
-        
+
         try:
             checked_start_date = datetime.strptime(
                 start_date, '%Y-%m-%d %H:%M:%S').date()
         except ValueError:
             collection.delete_one({'url': unique_id})
             continue
-        
+
         if current_date > checked_start_date:
             collection.delete_one({'url': unique_id})
 
@@ -171,13 +207,13 @@ def check_and_delete_old_events():
 check_and_delete_old_events()
 
 
-def save_to_mongodb(collection, search_key, collected_events):
+def save_to_mongodb(search_key, collected_events):
     for event in collected_events:
         if isinstance(event, dict):
             unique_id = event.get('url', 'N/A')
             if unique_id == 'N/A':
                 continue
-            
+
             event_data = {
                 'search_key': search_key,
                 'url': unique_id,
@@ -192,7 +228,7 @@ def save_to_mongodb(collection, search_key, collected_events):
                 'event_organiser_link': event.get(
                     'event_organiser_link', 'N/A'),
             }
-            
+
             collection.update_one(
                 {'url': unique_id}, {'$set': event_data}, upsert=True)
         else:
@@ -203,7 +239,7 @@ def save_to_csv(events):
     directory = 'data_visuals'
     file_name = os.path.join(directory, 'collected_events.csv')
     file_exists = os.path.exists(file_name)
-    
+
     fields = [
         'name', 'location', 'show_date_time', 'event_price', 'summary',
         'url', 'event_organiser_name', 'event_organiser_link'
@@ -247,27 +283,19 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
         'Summary', 'URL', 'Organiser', 'Organiser Link']
     column_widths = [71, 58, 111, 12, 81, 140, 71, 140]
     # Set the column headers and their widths
-    
+
     for col_num, (header, width) in enumerate(zip(headers, column_widths), 1):
-        """
-        zip() pairs each element from headers with the corresponding element
-        from column_widths, this creates an iterator of tuples where each
-        tuple contains a header and its width enumerate() numerates each
-        iteration of the tuples list, starting at 1, giving the column number
-        Result: [(1, ('Event Name', 71)), (2, ('Date', 58)),
-        (3, ('Location', 111)) etc.]
-        """
         col_letter = get_column_letter(col_num)
         # get_column_letter() is a built in function from openpyxl that
         # returns the letter of the specified column,
         # example: 1 -> 'A', 2 -> 'B'
         sheet[f'{col_letter}1'] = header
         # Will set the headers stated above in the first row of the sheet
-        # iterating through columns A, B, C, D, E, F 
+        # iterating through columns A, B, C, D, E, F
         sheet.column_dimensions[col_letter].width = width
         # column_dimensions is a dictionary that stores the width of each
         # column, the width is set to the width in the column_widths list
-        
+
     for row_num, event in enumerate(events, 2):
         sheet[f'A{row_num}'] = event.get('name', 'N/A')
         sheet[f'B{row_num}'] = event.get('show_date_time', 'N/A')
@@ -277,7 +305,7 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
         sheet[f'F{row_num}'] = event.get('url', 'N/A')
         sheet[f'G{row_num}'] = event.get('event_organiser_name', 'N/A')
         sheet[f'H{row_num}'] = event.get('event_organiser_link', 'N/A')
-    
+
     workbook.save(filename)
     print(f'\n-------------------------------------\nEvents saved to'
           f'{filename}, download/view from the main menu.'
@@ -334,20 +362,20 @@ def parsed_scraped_date(date_time):
 
     # Remove any extra spaces and commas
     date_time = ' '.join(date_time.split()).replace(',', '')
-    
+
     # Identify and correct multiple months in the date_time
     month_abbrs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     month_count = {month: date_time.count(month) for month in month_abbrs}
     # Counts the occurrences of each month abbreviation in the date_time
     months_found = [month for month, count in month_count.items() if count > 0]
-    
+
     if len(months_found) > 1:
         # Replace first month witht he last one specified
         first_month = months_found[0]
         last_month = months_found[-1]
         date_time = date_time.replace(first_month, last_month, 1)
-    
+
     # For cases where users enter date ranges, only take the first date
     date_time_parts = date_time.split(' ')
     # Only take the first 5 parts of the date_time
@@ -371,15 +399,15 @@ def parsed_scraped_date(date_time):
             try:
                 year, month, day = map(int, parts[0].split('-'))
                 last_valid_day = calendar.monthrange(year, month)[1]
-                
+
                 if day > last_valid_day:
                     day = last_valid_day
-                
+
                 corrected_date = f'{year}-{month}-{day} {parts[1]}'
                 dt = parser.parse(corrected_date, fuzzy=True)
             except ValueError:
                 return 'N/A'
-                
+
     # Format the datetime object into the desired format
     formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -408,13 +436,13 @@ def display_events(events, start_index, end_index, user_selection, search_key):
                 continue  # Skip invalid event data
         else:
             continue  # Skip invalid event data
-            
+
     if user_selection == 'data-manipulation':
         return print('-------------------------------------'
                      '\nEvents displayed in relevance bottom to top.')
     elif user_selection in ('eventbrite', 'eventbrite_top',
                             'eventbrite_top_no_category'):
-        save_to_mongodb(collection, search_key, collected_events)
+        save_to_mongodb(search_key, collected_events)
 
     # Cache the events in the hashtable
     cache[search_key] = events
@@ -427,32 +455,32 @@ def scrape_eventbrite_events(location, day, product, page_number,
         f'{day}/{product}/?page={page_number}&start_date={start_date}&end_date'
         f'={end_date}'
     )
-    page = requests.get(url)
+    page = requests.get(url, timeout=20)
     soup = BeautifulSoup(page.content, 'html.parser')
     events = soup.find_all('a', class_='event-card-link')
-    
+
     event_data = []
     tags_counter = Counter()
     seen_urls = set()
-    
+
     for event in events:
         event_url = event['href']
         if event_url in seen_urls:
             continue
         seen_urls.add(event_url)
-        
+
         event_info = {
             'name': event.get('aria-label', '').replace('View', '').strip(),
             'url': event_url
         }
-        
-        page_detail = requests.get(event_url)
+
+        page_detail = requests.get(event_url, timeout=20)
         page_detail_soup = BeautifulSoup(page_detail.content, 'html.parser')
 
         price_div = page_detail_soup.find('div',
                                           class_="conversion-bar__panel-info")
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
-        
+
         location_div = page_detail_soup.find('div',
                                              class_='location-info__address')
         if location_div:
@@ -485,23 +513,23 @@ def scrape_eventbrite_events(location, day, product, page_number,
             'span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(
             strip=True) if date_time else 'No date and time available'
-        
+
         event_organiser_name = 'No organiser available'
         event_organiser_link = None
-        
+
         event_organiser_divs = page_detail_soup.find_all(
             'div', class_='descriptive-organizer-info-heading-signal-container'
             )
-        
+
         for div in event_organiser_divs:
             organiser_link = div.find(
                 'a', class_='descriptive-organizer-info-mobile__name-link')
             if organiser_link:
                 event_organiser_name = organiser_link.get_text(strip=True)
                 event_organiser_link = organiser_link['href']
-    
+
         date_parsed = parsed_scraped_date(event_date_time)
-        
+
         tags = page_detail_soup.find_all(
             'a', class_='tags-link listing-tag eds-l-mar-top-4'
             ' eds-text-bs eds-text--center')
@@ -519,9 +547,9 @@ def scrape_eventbrite_events(location, day, product, page_number,
         })
 
         event_data.append(event_info)
-    
+
     more_events_check = len(events) > 0  # Check if more events on next page
-    
+
     return event_data, tags_counter, more_events_check
 
 
@@ -532,26 +560,26 @@ def scrape_eventbrite_categories(location, category_slug, day,
         f'{category_slug}--events--{day}/?page={page_number}&start_date='
         f'{start_date}&end_date={end_date}'
     )
-    page = requests.get(url)
+    page = requests.get(url, timeout=20)
     soup = BeautifulSoup(page.content, 'html.parser')
     events = soup.find_all('a', class_='event-card-link')
-    
+
     event_data = []
     tags_counter = Counter()
     seen_urls = set()
-    
+
     for event in events:
         event_url = event['href']
         if event_url in seen_urls:
             continue
         seen_urls.add(event_url)
-        
+
         event_info = {
             'name': event.get('aria-label', '').replace('View', '').strip(),
             'url': event_url
         }
-        
-        page_detail = requests.get(event_url)
+
+        page_detail = requests.get(event_url, timeout=20)
         page_detail_soup = BeautifulSoup(page_detail.content, 'html.parser')
 
         price_div = page_detail_soup.find(
@@ -573,7 +601,7 @@ def scrape_eventbrite_categories(location, category_slug, day,
             if location_div:
                 event_location = location_div.get_text(
                     separator=' ', strip=True)
-        
+
         summary_div = page_detail_soup.find('div', class_='eds-text--left')
         event_summary = ''
         if summary_div:
@@ -585,7 +613,7 @@ def scrape_eventbrite_categories(location, category_slug, day,
             summary = page_detail_soup.find('p', class_='summary')
             event_summary = summary.get_text(
                 strip=True) if summary else 'No summary available'
-                
+
         date_time = page_detail_soup.find(
             'span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(
@@ -593,20 +621,20 @@ def scrape_eventbrite_categories(location, category_slug, day,
 
         event_organiser_name = 'No organiser available'
         event_organiser_link = None
-        
+
         event_organiser_divs = page_detail_soup.find_all(
             'div', class_='descriptive-organizer-info-heading-signal-container'
             )
-       
+
         for div in event_organiser_divs:
             organiser_link = div.find(
                 'a', class_='descriptive-organizer-info-mobile__name-link')
             if organiser_link:
                 event_organiser_name = organiser_link.get_text(strip=True)
                 event_organiser_link = organiser_link['href']
-                
+
         date_parsed = parsed_scraped_date(event_date_time)
-        
+
         tags = page_detail_soup.find_all(
             'a', class_='tags-link listing-tag eds-l-mar-top-4 eds-text-bs'
             ' eds-text--center')
@@ -624,40 +652,40 @@ def scrape_eventbrite_categories(location, category_slug, day,
         })
 
         event_data.append(event_info)
-    
+
     more_events_check = len(events) > 0
-    
+
     return event_data, tags_counter, more_events_check
 
 
 def scrape_eventbrite_top_events(location):
     url = f'https://www.eventbrite.co.uk/d/united-kingdom--{location}/events/'
-    page = requests.get(url)
+    page = requests.get(url, timeout=20)
     soup = BeautifulSoup(page.content, 'html.parser')
     events = soup.find_all('a', class_='event-card-link')
-    
+
     event_data = []
     tags_counter = Counter()
     seen_urls = set()
-    
+
     for event in events:
         event_url = event['href']
         if event_url in seen_urls:
             continue
         seen_urls.add(event_url)
-        
+
         event_info = {
             'name': event.get('aria-label', '').replace('View', '').strip(),
             'url': event_url
         }
-        
-        page_detail = requests.get(event_url)
+
+        page_detail = requests.get(event_url, timeout=20)
         page_detail_soup = BeautifulSoup(page_detail.content, 'html.parser')
 
         price_div = page_detail_soup.find(
             'div', class_="conversion-bar__panel-info")
         event_price = price_div.get_text(strip=True) if price_div else 'Free'
-        
+
         location_div = page_detail_soup.find(
             'div', class_='location-info__address')
         if location_div:
@@ -690,23 +718,23 @@ def scrape_eventbrite_top_events(location):
             'span', class_='date-info__full-datetime')
         event_date_time = date_time.get_text(
             strip=True) if date_time else 'No date and time available'
-        
+
         event_organiser_name = 'No organiser available'
         event_organiser_link = None
-        
+
         event_organiser_divs = page_detail_soup.find_all(
             'div', class_='descriptive-organizer-info-heading-signal-container'
             )
-        
+
         for div in event_organiser_divs:
             organiser_link = div.find(
                 'a', class_='descriptive-organizer-info-mobile__name-link')
             if organiser_link:
                 event_organiser_name = organiser_link.get_text(strip=True)
                 event_organiser_link = organiser_link['href']
-    
+
         date_parsed = parsed_scraped_date(event_date_time)
-        
+
         tags = page_detail_soup.find_all(
             'a', class_='tags-link listing-tag eds-l-mar-top-4'
             ' eds-text-bs eds-text--center')
@@ -724,11 +752,11 @@ def scrape_eventbrite_top_events(location):
         })
 
         event_data.append(event_info)
-    
+
     more_events_check = len(events) > 0  # Check if more events on next page
-    
+
     return event_data, tags_counter, more_events_check
-   
+
 
 def collection_menu():
     while True:
@@ -772,7 +800,7 @@ def extract_price(price_str):
     is found, 0.0 is returned. The sort_events function uses the extract_price
     function to extract the numeric part of the event_price before sorting.
     """
-    
+
     match = re.search(r'\d+(\.\d+)?', price_str)
     # \d+(\.\d+)? means match one or more digits followed by an
     # optional decimal point and one or more digits
@@ -791,13 +819,13 @@ def check_file_unique(image_path):
     base, ext = os.path.splitext(filename)
     # Example: 'event_count_per_day.png' -> ('event_count_per_day', '.png')
     counter = 1
-    
+
     while os.path.exists(image_path):
         image_path = os.path.join(directory, f'{base}_{counter}{ext}')
         # While theres already a file with the same name,
         # add a counter to the filename
         counter += 1
-    
+
     return image_path
 
 
@@ -805,7 +833,7 @@ def compare_events(events):
     if len(events) < 2:
         print('Not enough events to compare.')
         return
-    
+
     while True:
         print('\nWhat would you like to compare?')
         print('1. Average price of events')
@@ -816,7 +844,7 @@ def compare_events(events):
         print('6. Event dates over time')
         print('7. Main Menu')
         choice = input('Enter your choice: ').strip()
-    
+
         if choice == '1':
             spinner = Spinner('Processing...')
             spinner.start()
@@ -1057,7 +1085,7 @@ def get_coordinates(location, api_key):
         f'https://maps.googleapis.com/maps/api/geocode/json?address={location}'
         f'&key={api_key}')
     # Construct the URL for the Google Maps Geocoding API
-    response = requests.get(url)
+    response = requests.get(url, timeout=20)
     # Send a GET request to the URL
     if response.status_code == 200:
         data = response.json()
@@ -1094,13 +1122,13 @@ def find_closest_events(user_location, events, api_key):
         return float('inf')
         # If fails return infinity as this is a easy way to sort the
         # events with no coordinates to the end of the list
-        
+
     events_with_coordinates = [
         event for event in events if event.get('location')]
     # Filter out events with no location
     events_with_coordinates.sort(key=distance_to_user)
     # Sort the events by using the distance_to_user function as the key
-    
+
     return events_with_coordinates[::-1]
     # Return the sorted events in reverse order
 
@@ -1109,7 +1137,7 @@ def sort_events(events):
     if len(events) < 2:
         print('Not enough events to sort.')
         return
-    
+
     while True:
         print('\nWhat would you like to sort?')
         print('1. Free events')
@@ -1119,10 +1147,10 @@ def sort_events(events):
         print('5. Closest distance events')
         print('6. Main Menu')
         choice = input('Enter your choice: ').strip()
-        
+
         spinner = Spinner("Sorting events...")
         spinner.start()
-        
+
         try:
             # Lambda functions are a powerful tool for writing concise,
             # one-off functions, especially useful in situations like sorting,
@@ -1246,7 +1274,7 @@ def event_manipulation_menu(events):
         print('2. Compare events')
         print('3. Main Menu')
         choice = input('Enter your choice: ').strip()
-        
+
         if choice == '1':
             sort_events(events)
         elif choice == '2':
@@ -1285,17 +1313,17 @@ def get_unique_search_keys():
 def search_events_in_collection():
     unique_search_keys = get_unique_search_keys()
     user_selection = 'data-manipulation'
-    
+
     if len(unique_search_keys) == 0:
         print("No events found in the collection.")
         return
-    
+
     print("-------------------------------------\nChoose a search key:")
     for i, key in enumerate(unique_search_keys, 1):
-        # Enumerate will number each unique search key starting from 1, 
+        # Enumerate will number each unique search key starting from 1,
         # 'i' will be the number and 'key' will be the search key
         print(f"{i}. {key}")
-    
+
     while True:
         try:
             choice = input("\nEnter the number of your choice: ").strip()
@@ -1320,11 +1348,11 @@ def search_events_in_collection():
                   f'\nInvalid choice. Please enter a number'
                   f' between 1 and {len(unique_search_keys)}.'
                   f'\n-------------------------------------')
-    
+
     if not all_events:
         print("No events found for the selected search key.")
         return
-    
+
     display_events(all_events, 0, len(all_events), user_selection,
                    search_key=unique_search_keys[int(choice) - 1])
     while True:
@@ -1336,13 +1364,13 @@ def search_events_in_collection():
             try:
                 save_to_csv(all_events)
                 return
-            except Exception as e:
+            except ValueError as e:
                 print(f'Error saving events to CSV: {e}')
         elif save_choice == 'e':
             try:
                 save_to_excel(all_events)
                 return
-            except Exception as e:
+            except ValueError as e:
                 print(f'Error saving events to Excel: {e}')
         elif save_choice == 't':
             event_manipulation_menu(all_events)
@@ -1360,7 +1388,7 @@ def view_all_events():
     if len(all_events) == 0:
         print('No events found')
         return
-    
+
     display_events(all_events, 0, len(all_events),
                    user_selection, search_key='None')
     while True:
@@ -1372,13 +1400,13 @@ def view_all_events():
             try:
                 save_to_csv(all_events)
                 return
-            except Exception as e:
+            except ValueError as e:
                 print(f"Error saving events to CSV: {e}")
         elif save_choice == 'e':
             try:
                 save_to_excel(all_events)
                 return
-            except Exception as e:
+            except ValueError as e:
                 print(f"Error saving events to Excel: {e}")
         elif save_choice == 't':
             event_manipulation_menu(all_events)
@@ -1416,7 +1444,7 @@ def search_events():
         else:
             start_date = input('Enter the start date (YYYY-MM-DD): ')
             end_date = input('Enter the end date (YYYY-MM-DD): ')
-        
+
     search_key = f'{product}_{location}'
     user_selection = 'eventbrite'
     spinner = Spinner("Fetching events...")
@@ -1444,7 +1472,7 @@ def search_events():
     result = display_paginated_events(
         unique_events, search_key, user_selection, location, day,
         start_date, end_date, tags_counter, product, page_number)
-    
+
     if result == 'new_search':
         main()
         return
@@ -1459,7 +1487,7 @@ def search_top_categories():
         'Dating', 'Film & Media', 'Fashion', 'Government', 'Auto, Boat & Air',
         'School Activities'
     ]
-    
+
     user_selection = 'eventbrite_top'
     product = None
     tags_counter = Counter()
@@ -1497,7 +1525,7 @@ def search_top_categories():
     start_date = ''
     end_date = ''
     day = ''
-    
+
     if date_choice == 'y':
         print('Please enter an option: ')
         print('1. Today')
@@ -1546,7 +1574,7 @@ def search_top_categories():
         unique_events, search_key, user_selection, location, day,
         start_date, end_date, tags_counter, category_slug, product,
         page_number)
-        
+
     if result == 'new_search':
         main()
         return
@@ -1563,7 +1591,7 @@ def search_top_events():
     start_date = ''
     end_date = ''
     tags_counter = Counter()
-  
+
     try:
         if search_key in cache:
             spinner.stop()
@@ -1589,7 +1617,7 @@ def search_top_events():
 
 
 def display_common_tags(tags_counter):
-    if tags_counter: 
+    if tags_counter:
         spinner = Spinner("Loading most common tags...")
         spinner.start()
         most_common_tags = tags_counter.most_common(6)
@@ -1659,6 +1687,7 @@ def display_paginated_events(unique_events, search_key, user_selection,
     total_events = len(unique_events)
     current_page = 0
     more_events_check = True
+    should_break = False
 
     while more_events_check:
         start_index = current_page * page_size
@@ -1677,14 +1706,21 @@ def display_paginated_events(unique_events, search_key, user_selection,
             spinner.start()
             try:
                 if user_selection == 'eventbrite':
-                    events_data, new_tags_counter, more_events_check = scrape_eventbrite_events(location, day, product, page_number, start_date, end_date)
+                    events_data, new_tags_counter, more_events_check = \
+                        scrape_eventbrite_events(
+                            location, day, product,
+                            page_number, start_date, end_date)
                 elif user_selection == 'eventbrite_top':
-                    events_data, new_tags_counter, more_events_check = scrape_eventbrite_categories(location, category_slug, day, page_number, start_date, end_date)
+                    events_data, new_tags_counter, more_events_check = \
+                        scrape_eventbrite_categories(
+                            location, category_slug, day,
+                            page_number, start_date, end_date)
                 elif user_selection == 'eventbrite_top_no_category':
-                    events_data, new_tags_counter, more_events_check = scrape_eventbrite_top_events(location)
+                    events_data, new_tags_counter, more_events_check = \
+                        scrape_eventbrite_top_events(location)
                 else:
                     break
-                
+
                 print(f'Fetched {len(events_data)}'
                       f' events for page number: {page_number} ')
                 unique_events.extend(events_data)
@@ -1700,9 +1736,15 @@ def display_paginated_events(unique_events, search_key, user_selection,
                 spinner.stop()
                 if not more_events_check:
                     print("No more events to fetch.")
-                    break
-                
-        user_input = input("-------------------------------------\nPress 'Y' to see more events, 'S' to start a new search, or any other key to exit: ").strip().lower()
+                    should_break = True
+
+            if should_break:
+                break
+
+        user_input = input('-------------------------------------'
+                           '\nPress "Y" to see more events,'
+                           ' "S" to start a new search, or'
+                           ' any other key to exit: ').strip().lower()
         if user_input == 's':
             return 'new_search'
         elif user_input == 'y':
@@ -1712,6 +1754,7 @@ def display_paginated_events(unique_events, search_key, user_selection,
             sys.exit()
 
     return 'done'
-        
+
+
 if __name__ == "__main__":
     main()
