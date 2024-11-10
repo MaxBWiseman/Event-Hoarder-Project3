@@ -1,3 +1,13 @@
+"""
+This module provides functionality for scraping event data
+with BeutifulSoup from Eventbrite, processing and storing the
+data in MongoDB. Events can be viewed in console or there are
+functions for uploading user collected event data to CSV/Excel
+or generate visualizations with collected data to Google Cloud Storage
+so they can be accessed by the user with links from the console.
+
+Modules and librarys used are below:
+"""
 import base64
 import calendar
 import csv
@@ -220,8 +230,7 @@ def save_to_mongodb(search_key, collected_events):
 
     Args:
         search_key (string): The phrase the user used to search for events.
-        collected_events (object): The event objects that
-        were viewed and collected.
+        collected_events (list of dict): The users collected events.
     """
     for event in collected_events:
         if isinstance(event, dict):
@@ -255,7 +264,7 @@ def save_to_csv(events):
     Save events in the mongodb collection to a CSV file.
 
     Args:
-        events (object): Event objects to save to the CSV file.
+        events (list of dict): The users collected events.
     """
     directory = 'data_visuals'
     file_name = os.path.join(directory, 'collected_events.csv')
@@ -296,7 +305,7 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
     Save events in the mongodb collection to an Excel file.
 
     Args:
-        events (object): Event objects to save to the Excel file.
+        events (list of dict): The users collected events
         filename (str, optional): Defaults to 'data_visuals/events_data.xlsx'.
     """
     filename = check_file_unique(filename)
@@ -460,14 +469,14 @@ def display_events(events, start_index, end_index, user_selection, search_key):
     Display events to the user in a readable, friendley format.
 
     Args:
-        events (object): Scraped event data.
+        events (list of dict): Scraped event data.
         start_index (interger): The start index of the events to display.
         end_index (interger): The end index of the events to display.
         user_selection (string): A backend string to determine what to do
         search_key (string): The phrase the user used to search for events.
 
     Returns:
-        List of objects: The events displayed to the user.
+        List of dictionarys: The events displayed to the user.
     """
     collected_events = events[start_index:end_index]
     for data in collected_events:
@@ -525,9 +534,12 @@ def scrape_eventbrite_events(location, day, product, page_number,
 
     Returns:
         tuple: A tuple containing:
-            - event_data (list): A list of dictionaries, each representing an event.
-            - tags_counter (Counter): A Counter object counting the occurrences of tags.
-            - more_events_check (bool): A boolean indicating if there are more events to fetch.
+            - event_data (list): A list of dictionaries,
+                each representing an event.
+            - tags_counter (Counter): A Counter object counting
+                the occurrences of tags.
+            - more_events_check (bool): A boolean indicating if there
+                are more events to fetch.
     """
     url = (
         f'https://www.eventbrite.com/d/united-kingdom--{location}/events--'
@@ -640,10 +652,10 @@ def scrape_eventbrite_categories(location, category_slug, day,
     Args:
         location (string): The users given location. (optional)
 
+        category_slug (string): A slug representing the chosen category.
+
         day (string): A string representing eg. 'today',
         'tomorrow', 'this-weekend'. (optional)
-
-        product (string): The type of event the user is looking for. (optional)
 
         page_number (interger): The page number of the search
         results for backend
@@ -766,6 +778,22 @@ def scrape_eventbrite_categories(location, category_slug, day,
 
 
 def scrape_eventbrite_top_events(location):
+    """
+    Scrape events from Eventbrite using a given
+    location to find top events there.
+
+    Args:
+        location (string): The users given location. (optional)
+
+    Returns:
+        tuple: A tuple containing:
+        - event_data (list): A list of dictionaries,
+            each representing an event.
+        - tags_counter (Counter): A Counter object counting
+            the occurrences of tags.
+        - more_events_check (bool): A boolean indicating if
+            there are more events to fetch.
+    """
     url = f'https://www.eventbrite.co.uk/d/united-kingdom--{location}/events/'
     page = requests.get(url, timeout=20)
     soup = BeautifulSoup(page.content, 'html.parser')
@@ -866,6 +894,10 @@ def scrape_eventbrite_top_events(location):
 
 
 def collection_menu():
+    """
+    This menu provides the user with options to view
+    the events in the collection
+    """
     while True:
         print("\nChoose an option to manipulate events or print to CSV:")
         print("1. View all searched events")
@@ -920,6 +952,17 @@ def extract_price(price_str):
 
 
 def check_file_unique(image_path):
+    """
+    This function splits the image_path into a
+    directory and filename, then checks if the filename already exists.
+    If so, add +1 to the filename and return the new image_path.
+
+    Args:
+        image_path (string): The path to the visualisation image.
+
+    Returns:
+        string: If the image already exists, return a new image_path.
+    """
     directory, filename = os.path.split(image_path)
     # Example: 'data_visuals/event_count_per_day.png' ->
     # ('data_visuals', 'event_count_per_day.png')
@@ -937,6 +980,13 @@ def check_file_unique(image_path):
 
 
 def compare_events(events):
+    """
+    A menu to compare collected events with different
+    analytics and visualisations.
+
+    Args:
+        events (list of dictionarys): The users collected events.
+    """
     if len(events) < 2:
         print('Not enough events to compare.')
         return
@@ -1188,6 +1238,18 @@ def compare_events(events):
 
 
 def get_coordinates(location, api_key):
+    """
+    Get the latitude and longitude coordinates of a location using the
+    given location string by the user and use the Google Maps Geocoding API
+    to return the coordinates as a tuple.
+
+    Args:
+        location (string): The users given location.
+        api_key (string): My API key for the Google Maps Geocoding API.
+
+    Returns:
+        tuple: A tuple containing the latitude and longitude coordinates.
+    """
     url = (
         f'https://maps.googleapis.com/maps/api/geocode/json?address={location}'
         f'&key={api_key}')
@@ -1207,6 +1269,18 @@ def get_coordinates(location, api_key):
 
 
 def find_closest_events(user_location, events, api_key):
+    """
+    Sort the events by the distance to the user's location.
+
+    Args:
+        user_location (string): The users given location.
+        events (list of dict): The users collected events.
+        api_key (string): My API key for the Google Maps Geocoding API.
+
+    Returns:
+        list of dict: A sorted list of event dictionaries from bottom to top
+        in relavance to the closest to user's location.
+    """
     user_coordinates = get_coordinates(user_location, api_key)
     # Get the coordinates of the user's location
     if not user_coordinates:
@@ -1241,6 +1315,12 @@ def find_closest_events(user_location, events, api_key):
 
 
 def sort_events(events):
+    """
+    A menu to sort the collected events by different criteria.
+
+    Args:
+        events (list of dict): The user's collected events.
+    """
     if len(events) < 2:
         print('Not enough events to sort.')
         return
@@ -1375,6 +1455,12 @@ def sort_events(events):
 
 
 def event_manipulation_menu(events):
+    """
+    A menu to manipulate the collected events data the user wants to view.
+
+    Args:
+        events (list of dict): The user's collected events.
+    """
     while True:
         print('\nChoose an option to manipulate the events data:')
         print('1. Sort events')
@@ -1397,6 +1483,16 @@ def event_manipulation_menu(events):
 
 
 def get_unique_search_keys():
+    """
+    This function provides a list of all the users searches,
+    when the user searches for events, the search key is stored
+    along with each event in the collection. This works like a
+    class to identify the events under groups of search keys.
+
+    Returns:
+        List of strings: A list of all the unique search keys
+                        in the collection.
+    """
     pipeline = [
         {'$group': {'_id': '$search_key'}},
     ]
@@ -1418,6 +1514,14 @@ def get_unique_search_keys():
 
 
 def search_events_in_collection():
+    """
+    Uses the return from get_unique_search_keys function to
+    display the users searches and allow the user to select
+    a search key to view the events for that search key.
+
+    Returns:
+        List of dict: A list of all the events under the selected search key.
+    """
     unique_search_keys = get_unique_search_keys()
     user_selection = 'data-manipulation'
 
@@ -1490,6 +1594,11 @@ def search_events_in_collection():
 
 
 def view_all_events():
+    """
+    This function displays all the events in the collection
+    with the option to save the events to a CSV, Excel file or
+    perform tasks on the data.
+    """
     all_events = list(collection.find({}))
     user_selection = 'data-manipulation'
     if len(all_events) == 0:
@@ -1526,6 +1635,14 @@ def view_all_events():
 
 
 def search_events():
+    """
+    Option 1 on the main menu, allows the user to search for events
+    with optional event type, location parameters and date range.
+
+    Returns:
+        List of dict: A list of scraped events from the selected search,
+                    and optional location and date range.
+    """
     product = input('Enter event type or name: ').replace(' ', '%20')
     location = input('Enter location: ').replace(' ', '%20')
     print('Would you like to enter a date? (Y/N)')
@@ -1586,6 +1703,14 @@ def search_events():
 
 
 def search_top_categories():
+    """
+    Option 3 on the main menu, allows the user to search for top set
+    categories of events with a optional location and date range parameters.
+
+    Returns:
+        List of dict: A list of scraped events from the selected category,
+                    and optional location and date range.
+    """
     categories = [
         'Home & Lifestyle', 'Business', 'Health', 'Performing & Visual Arts',
         'Family & Education', 'Holidays', 'Music', 'Community',
@@ -1688,6 +1813,14 @@ def search_top_categories():
 
 
 def search_top_events():
+    """
+    Option 2 on the main menu, allows the user to search for top events
+    with a optional location parameter.
+
+    Returns:
+        List of dict: A list of scraped top events from the optional location.
+                    Else returns a list of scraped top events from the UK.
+    """
     location = input('Enter location: ').replace(' ', '')
     search_key = f'all_top_events_{location}'
     spinner = Spinner("Fetching events...")
@@ -1724,6 +1857,13 @@ def search_top_events():
 
 
 def display_common_tags(tags_counter):
+    """
+    Display the most common tags from the collected events.
+
+    Args:
+        tags_counter (Counter): A Counter object containing
+                            a count of unique tags
+    """
     if tags_counter:
         spinner = Spinner("Loading most common tags...")
         spinner.start()
@@ -1735,12 +1875,21 @@ def display_common_tags(tags_counter):
 
 
 def main():
+    """
+    The first function to run when the program starts.
+    Functions as the main menu for the program.
+    """
     while True:
         print('-------------------------------------'
               '\nWelcome to Event Hoarder!\nSearch for events and they will be'
               ' automatically be saved to a database so you '
               '\ncan perform sorting, comparing or filtering tasks,'
               ' also print to Excel or CSV'
+              '\nSearch for events with either of the first 3 options,'
+              '\nAfter viewing your searched events, you can view them'
+              ' in the database with option 4'
+              '\nOption 5 is for viewing links to saved Excel, CSV or data visuals'
+              'that you may make.'
               '\n-------------------------------------')
         print('\nChoose an option:')
         print('1. Quick Search & Collect')
@@ -1790,6 +1939,31 @@ def main():
 def display_paginated_events(unique_events, search_key, user_selection,
                              location, day, start_date, end_date, tags_counter,
                              category_slug=None, product=None, page_number=1):
+    """
+    Display the scraped events in a paginated format with 5 per
+    console page and fetch more events if requested and available.
+
+    Args:
+       - unique_events (list of dict): A list of unique scraped events.
+       - search_key (string): The user given search term.
+       - user_selection (string): A string used in backend functions
+                                to identify the user's choice.
+       - location (string, optional): The user given location.
+       - day (string, optional): The user given day.
+       - start_date (string, optional): The user given event start date.
+       - end_date (string, optional): The user given event end date.
+       - tags_counter (Counter): A Counter object containing a count
+                                of unique tags.
+       - category_slug (string, optional): The category slug for the top
+                                        categories search. Defaults to None.
+       - product (_type_, optional): The users given event type.
+                                    Defaults to None.
+       - page_number (int, optional): Page number used for URL pagination.
+                                    Defaults to 1.
+
+    Returns:
+        _type_: _description_
+    """
     page_size = 5
     total_events = len(unique_events)
     current_page = 0
