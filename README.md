@@ -276,4 +276,4 @@ Special thanks to Eventbrite for allowing scraping.
 
 ### More words from developer
 
-This project is a labor of love (1396 lines) and a testament to the power of data. I hope it brings value to users and inspires further exploration in the world of event data analysis.
+This project is a labor of love, 1455 lines and a testament to the power of data, all screenshots in this README are from before linting for better readability. After linting the project is now 2097 lines long. I hope this brings value to its few users and inspires further exploration in the world of event data analysis.

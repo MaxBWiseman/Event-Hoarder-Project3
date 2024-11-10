@@ -1691,6 +1691,10 @@ def search_events():
 
     search_key = f'{product}_{location}'
     user_selection = 'eventbrite'
+    print('Loading times may vary depending on'
+          ' the scope of the search.'
+          '\nBroader searches may take longer to load.'
+          ' Avrg time: 25sec-3min')
     spinner = Spinner("Fetching events...")
     spinner.start()
     unique_events = []
@@ -1707,7 +1711,7 @@ def search_events():
             print('Loading times may vary depending on'
                   ' the scope of the search.'
                   '\nBroader searches may take longer to load.'
-                  ' Avrg time: 35sec-2min')
+                  ' Avrg time: 25sec-3min')
             spinner = Spinner("Scraping new events...")
             spinner.start()
             events_data, tags_counter, _ = scrape_eventbrite_events(
@@ -1802,6 +1806,10 @@ def search_top_categories():
     display_categories()
     category = get_user_choice()
     search_key = f'{generate_slug(category)}_{location}_{country}'
+    print('Loading times may vary depending on'
+          ' the scope of the search.'
+          '\nBroader searches may take longer to load.'
+          ' Avrg time: 25sec-3min')
     spinner = Spinner("Fetching events...")
     spinner.start()
     category_slug = generate_slug(category)
@@ -1851,6 +1859,10 @@ def search_top_events():
     """
     location = input('Enter location: ').replace(' ', '')
     search_key = f'all_top_events_{location}'
+    print('Loading times may vary depending on'
+          ' the scope of the search.'
+          '\nBroader searches may take longer to load.'
+          ' Avrg time: 25sec-3min')
     spinner = Spinner("Fetching events...")
     spinner.start()
     unique_events = []
@@ -1925,7 +1937,8 @@ def main():
               '\nAfter viewing your searched events, you can view them'
               ' in the database with option 4'
               '\nOption 5 is for viewing links to saved Excel,'
-              ' CSV or data visuals that you may make.'
+              ' CSV or data visuals that'
+              ' you may make.'
               '\n-------------------------------------')
         print('\nChoose an option:')
         print('1. Quick Search & Collect')
@@ -2020,6 +2033,10 @@ def display_paginated_events(unique_events, search_key, user_selection,
         if end_index >= total_events:
             # Fetch more events if available
             page_number += 1
+            print('Loading times may vary depending on'
+                  ' the scope of the search.'
+                  '\nBroader searches may take longer to load.'
+                  ' Avrg time: 25sec-3min')
             spinner = Spinner("Fetching more events...")
             spinner.start()
             try:
