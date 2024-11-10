@@ -899,12 +899,19 @@ def collection_menu():
     the events in the collection
     """
     while True:
-        print("\nChoose an option to manipulate events or print to CSV:")
-        print("1. View all searched events")
-        print("2. View recent searches")
-        print("3. Main Menu")
-        print("#. Clear Database")
-        choice = input("Enter your choice: ").strip()
+        print('\n-------------------------------------'
+              '\nOn this menu you may view your all your collected events,'
+              '\n view recentley searched events, or clear the database.'
+              '\nAfter here when you choose how to view the events,'
+              '\n you may export to CSV (C) and Excel (E) or perform'
+              '\n data tasks with these events (T).'
+              '\n-------------------------------------')
+        print('\nChoose an option to manipulate events or print to CSV:')
+        print('1. View all searched events')
+        print('2. View recent searches')
+        print('3. Main Menu')
+        print('#. Clear Database')
+        choice = input('Enter your choice: ').strip()
 
         if choice == '1':
             view_all_events()
@@ -1326,6 +1333,11 @@ def sort_events(events):
         return
 
     while True:
+        print('\n-------------------------------------'
+              'After you select an option, your selection will be displayed'
+              ' \nor saved as a visualisation, that can be viewed/downloaded'
+              ' \nfrom a provided link in the main menu with option 5'
+              '\n-------------------------------------')
         print('\nWhat would you like to sort?')
         print('1. Free events')
         print('2. Cheapest events')
@@ -1684,6 +1696,10 @@ def search_events():
             unique_events = cache[search_key]
         else:
             spinner.stop()
+            print('Loading times may vary depending on'
+                  ' the scope of the search.'
+                  '\nBroader searches may take longer to load.'
+                  ' Avrg time: 35sec-2min')
             spinner = Spinner("Scraping new events...")
             spinner.start()
             events_data, tags_counter, _ = scrape_eventbrite_events(
@@ -1792,6 +1808,10 @@ def search_top_categories():
             unique_events = cache[search_key]
         else:
             spinner.stop()
+            print('Loading times may vary depending on'
+                  ' the scope of the search.'
+                  '\nBroader searches may take longer to load.'
+                  ' Avrg time: 35sec-2min')
             spinner = Spinner("Scraping new events...")
             spinner.start()
             events_data, tags_counter, _ = scrape_eventbrite_categories(
@@ -1839,6 +1859,10 @@ def search_top_events():
             unique_events = cache[search_key]
         else:
             spinner.stop()
+            print('Loading times may vary depending on'
+                  ' the scope of the search.'
+                  '\nBroader searches may take longer to load.'
+                  ' Avrg time: 35sec-2min')
             spinner = Spinner("Scraping new events...")
             spinner.start()
             events_data, tags_counter, _ = scrape_eventbrite_top_events(
@@ -1888,8 +1912,8 @@ def main():
               '\nSearch for events with either of the first 3 options,'
               '\nAfter viewing your searched events, you can view them'
               ' in the database with option 4'
-              '\nOption 5 is for viewing links to saved Excel, CSV or data visuals'
-              'that you may make.'
+              '\nOption 5 is for viewing links to saved Excel,'
+              ' CSV or data visuals that you may make.'
               '\n-------------------------------------')
         print('\nChoose an option:')
         print('1. Quick Search & Collect')
@@ -2010,7 +2034,9 @@ def display_paginated_events(unique_events, search_key, user_selection,
                 # Update the tags counter with the new tags
                 total_events = len(unique_events)
                 # Update the total number of events
-                print(f'Total events after fetching: {total_events}')
+                print(f'Total events after fetching: {total_events}'
+                      '\nNext page of events has been fetched.'
+                      '\nYou may press "Y" and view more events.')
                 # Display the most common tags
                 display_common_tags(tags_counter)
             finally:
