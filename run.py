@@ -78,12 +78,12 @@ def upload_to_gcs(bucket_name, source_file_name, destination_blob_name):
     Uploads a file to a googlle cloud storage bucket.
 
     Args:
-        bucket_name (str): Name of the GCS bucket
-        source_file_name (str): The path to file for upload
-        destination_blob_name (str): Name of the file sent to GCS
+        bucket_name (str): Name of the GCS bucket.
+        source_file_name (str): The path to file for upload.
+        destination_blob_name (str): Name of the file sent to GCS.
 
     Returns:
-        str: Public GCS URL of the uploaded file
+        str: Public GCS URL of the uploaded file.
     """
     storage_client = storage.Client()
     # Create a new client
@@ -229,8 +229,8 @@ def save_to_mongodb(search_key, collected_events):
     Save user viewed events to MongoDB.
 
     Args:
-        search_key (string): The phrase the user used to search for events.
-        collected_events (list of dict): The users collected events.
+        search_key (str): The phrase the user used to search for events.
+        collected_events (list of dict): The user's collected events.
     """
     for event in collected_events:
         if isinstance(event, dict):
@@ -305,8 +305,9 @@ def save_to_excel(events, filename='data_visuals/events_data.xlsx'):
     Save events in the mongodb collection to an Excel file.
 
     Args:
-        events (list of dict): The users collected events
-        filename (str, optional): Defaults to 'data_visuals/events_data.xlsx'.
+        events (list of dict): The users collected events.
+        filename (str, optional): The filename for the Excel file,
+                                Defaults to 'data_visuals/events_data.xlsx'.
     """
     filename = check_file_unique(filename)
     workbook = openpyxl.Workbook()
@@ -360,10 +361,10 @@ def parsed_scraped_date(date_time):
     computer readable datetime object.
 
     Args:
-        date_time (string): User friendly date and time string.
+        date_time (str): User friendly date and time string.
 
     Returns:
-        object: A date_time object in the format '%Y-%m-%d %H:%M:%S'.
+        string: A date_time string in the format '%Y-%m-%d %H:%M:%S'.
     """
     if 'No date and time available' in date_time or not date_time.strip():
         return 'N/A'
@@ -470,13 +471,13 @@ def display_events(events, start_index, end_index, user_selection, search_key):
 
     Args:
         events (list of dict): Scraped event data.
-        start_index (interger): The start index of the events to display.
-        end_index (interger): The end index of the events to display.
-        user_selection (string): A backend string to determine what to do
-        search_key (string): The phrase the user used to search for events.
+        start_index (int): The start index of the events to display.
+        end_index (int): The end index of the events to display.
+        user_selection (str): A backend string to determine what to do
+        search_key (str): The phrase the user used to search for events.
 
     Returns:
-        List of dictionarys: The events displayed to the user.
+        List of dict: The events displayed to the user.
     """
     collected_events = events[start_index:end_index]
     for data in collected_events:
@@ -517,20 +518,20 @@ def scrape_eventbrite_events(location, day, product, page_number,
     Scrape events from Eventbrite using a quick search.
 
     Args:
-        location (string): The users given location. (optional)
+        location (str): The users given location. (optional)
 
-        day (string): A string representing eg. 'today',
-        'tomorrow', 'this-weekend'. (optional)
+        day (str): A string representing eg. 'today',
+                'tomorrow', 'this-weekend'. (optional)
 
-        product (string): The type of event the user is looking for. (optional)
+        product (str): The type of event the user is looking for. (optional)
 
-        page_number (interger): The page number of the search
-        results for backend
+        page_number (int): The page number of the search
+                        results for backend
 
-        start_date (string): The users given date to start
-        the search from. (optional)
+        start_date (str): The users given date to start
+                        the search from. (optional)
 
-        end_date (string): The users given date to end the search. (optional)
+        end_date (str): The users given date to end the search. (optional)
 
     Returns:
         tuple: A tuple containing:
@@ -945,6 +946,13 @@ def extract_price(price_str):
     If a number is found, it is converted to a float and returned. If no number
     is found, 0.0 is returned. The sort_events function uses the extract_price
     function to extract the numeric part of the event_price before sorting.
+
+    Args:
+        price_str (str): The price string to extract the price from.
+
+    Returns:
+        Float: The numeric part of the event price string, or 0.0 if no number
+                is found.
     """
 
     match = re.search(r'\d+(\.\d+)?', price_str)
@@ -992,7 +1000,7 @@ def compare_events(events):
     analytics and visualisations.
 
     Args:
-        events (list of dictionarys): The users collected events.
+        events (list of dict): The user's collected events.
     """
     if len(events) < 2:
         print('Not enough events to compare.')
@@ -1251,8 +1259,8 @@ def get_coordinates(location, api_key):
     to return the coordinates as a tuple.
 
     Args:
-        location (string): The users given location.
-        api_key (string): My API key for the Google Maps Geocoding API.
+        location (str): The users given location.
+        api_key (str): My API key for the Google Maps Geocoding API.
 
     Returns:
         tuple: A tuple containing the latitude and longitude coordinates.
@@ -1280,9 +1288,9 @@ def find_closest_events(user_location, events, api_key):
     Sort the events by the distance to the user's location.
 
     Args:
-        user_location (string): The users given location.
+        user_location (str): The users given location.
         events (list of dict): The users collected events.
-        api_key (string): My API key for the Google Maps Geocoding API.
+        api_key (str): My API key for the Google Maps Geocoding API.
 
     Returns:
         list of dict: A sorted list of event dictionaries from bottom to top
@@ -1720,7 +1728,7 @@ def search_events():
 
 def search_top_categories():
     """
-    Option 3 on the main menu, allows the user to search for top set
+    Option 3 on the main menu allows the user to search for top set
     categories of events with a optional location and date range parameters.
 
     Returns:
@@ -1835,11 +1843,11 @@ def search_top_categories():
 def search_top_events():
     """
     Option 2 on the main menu, allows the user to search for top events
-    with a optional location parameter.
+    with an optional location parameter.
 
     Returns:
-        List of dict: A list of scraped top events from the optional location.
-                    Else returns a list of scraped top events from the UK.
+        List of dict: A list of scraped top events from the optional location,
+                    or a list of scraped top events from the UK.
     """
     location = input('Enter location: ').replace(' ', '')
     search_key = f'all_top_events_{location}'
@@ -1887,6 +1895,10 @@ def display_common_tags(tags_counter):
     Args:
         tags_counter (Counter): A Counter object containing
                             a count of unique tags
+
+    Returns:
+        List: A list of tuples containing the most common tags
+        and their counts.
     """
     if tags_counter:
         spinner = Spinner("Loading most common tags...")
@@ -1969,24 +1981,25 @@ def display_paginated_events(unique_events, search_key, user_selection,
 
     Args:
        - unique_events (list of dict): A list of unique scraped events.
-       - search_key (string): The user given search term.
-       - user_selection (string): A string used in backend functions
+       - search_key (str): The user given search term.
+       - user_selection (str): A string used in backend functions
                                 to identify the user's choice.
-       - location (string, optional): The user given location.
-       - day (string, optional): The user given day.
-       - start_date (string, optional): The user given event start date.
-       - end_date (string, optional): The user given event end date.
+       - location (str, optional): The user given location.
+       - day (str, optional): The user given day.
+       - start_date (str, optional): The user given event start date.
+       - end_date (str, optional): The user given event end date.
        - tags_counter (Counter): A Counter object containing a count
                                 of unique tags.
-       - category_slug (string, optional): The category slug for the top
+       - category_slug (str, optional): The category slug for the top
                                         categories search. Defaults to None.
-       - product (_type_, optional): The users given event type.
+       - product (str, optional): The users given event type.
                                     Defaults to None.
        - page_number (int, optional): Page number used for URL pagination.
                                     Defaults to 1.
 
     Returns:
-        _type_: _description_
+        str: 'done' if the user is done viewing events or no more events,
+        'new_search' if the user wants to start a new search.
     """
     page_size = 5
     total_events = len(unique_events)
