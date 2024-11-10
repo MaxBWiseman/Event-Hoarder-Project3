@@ -1007,6 +1007,11 @@ def compare_events(events):
         return
 
     while True:
+        print('\n-------------------------------------'
+              '\nAfter you select an option, your selection will be displayed'
+              ' \nor saved as a visualisation, that can be viewed/downloaded'
+              ' \nfrom a provided link in the main menu with option 5'
+              '\n-------------------------------------')
         print('\nWhat would you like to compare?')
         print('1. Average price of events')
         print('2. Median price of events')
@@ -1342,7 +1347,7 @@ def sort_events(events):
 
     while True:
         print('\n-------------------------------------'
-              'After you select an option, your selection will be displayed'
+              '\nAfter you select an option, your selection will be displayed'
               ' \nor saved as a visualisation, that can be viewed/downloaded'
               ' \nfrom a provided link in the main menu with option 5'
               '\n-------------------------------------')
