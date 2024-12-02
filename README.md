@@ -241,6 +241,8 @@ My project was deployed to heroku, being sure to include the correct dependencie
  - To specify how heroku should start the application
 - **Whitenoise**
  - For loading static files
+- **Gunicorn**
+  -A Python WSGI HTTP Server for UNIX, used to serve the Django application in production.
 - **Config Vars**
  -  Where sensitive information critical for this project should be kept
 
