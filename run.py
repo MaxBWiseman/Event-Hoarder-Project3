@@ -1928,9 +1928,9 @@ def main():
               ' also print to Excel or CSV'
               '\nSearch for events with either of the first 3 options,'
               '\nAfter viewing your searched events, you can view them'
-              ' in the database with option 4'
+              ' in the database\n with option 4'
               '\nOption 5 is for viewing links to saved Excel,'
-              ' CSV or data visuals that'
+              ' CSV or data visuals that\n'
               ' you may make.'
               '\n-------------------------------------')
         print('\nChoose an option:')
@@ -2072,11 +2072,14 @@ def display_paginated_events(unique_events, search_key, user_selection,
                 break
 
         user_input = input('-------------------------------------'
-                           '\nPress "Y" to see more events,'
-                           ' "S" to start a new search, or'
+                           '\nPress "Y" to see more events, "T" to quickly go'
+                           ' and view/manipulate this data'
+                           ' "S" go back to main menu, or'
                            ' any other key to exit: ').strip().lower()
         if user_input == 's':
             return 'new_search'
+        elif user_input == 't':
+            collection_menu()
         elif user_input == 'y':
             current_page += 1
         else:
