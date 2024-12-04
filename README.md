@@ -288,3 +288,5 @@ Deployment hosted by Heroku - https://project3-event-hoarder-2d3f0c0cde4a.heroku
 ### More words from developer
 
 This project is a labor of love, 1455 lines and a testament to the power of data, all screenshots in this README are from before linting for better readability. After linting the project is now 2097 lines long. I hope this brings value to its few users and inspires further exploration in the world of event data analysis.
+
+This project idea was changed, originally I did a fitness tracking app, which had good functionality user wise, but not so much good as a portfolio peice that a assessor has to look at, in respect where my app took a whole week to see any results due to human growth being quite slow. This again is good for the user to get there results after 7 days have elapsed, but not for a assessor, this is the reason I changed.
