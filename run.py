@@ -1928,10 +1928,10 @@ def main():
               ' also print to Excel or CSV'
               '\nSearch for events with either of the first 3 options,'
               '\nAfter viewing your searched events, you can view them'
-              ' in the database\nwith option 4'
+              ' in the database\nwith option 4 or quickly access within searches with "T"'
               '\nOption 5 is for viewing links to saved Excel,'
               ' CSV or data visuals that\n'
-              ' you may make.'
+              'you may make.'
               '\n-------------------------------------')
         print('\nChoose an option:')
         print('1. Quick Search & Collect')
