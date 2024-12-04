@@ -30,6 +30,7 @@
     * [Creator](#creator)
     * [Media](#media)
     * [Acknowledgements](#acknowledgements)
+    * [Link to Production Deployment](#link-to-production-deployment)
     * [More Words from Developer](#more-words-from-developer)
 
 ## Main Blurb
@@ -238,10 +239,16 @@ My project was deployed to heroku, being sure to include the correct dependencie
  - To declare all the programs libraries and modules
 - **Procfile**
  - To specify how heroku should start the application
+- **Whitenoise**
+ - For loading static files
+- **Gunicorn**
+  -A Python WSGI HTTP Server for UNIX, used to serve the Django application in production.
 - **Config Vars**
  -  Where sensitive information critical for this project should be kept
 
 After confirming these, I connected my GitHub to the Deploy section on the heroku dashboard and deployed the main branch of my projects repository.
+
+Deployment link - https://project3-event-hoarder-2d3f0c0cde4a.herokuapp.com/
 
 
 ### How to clone this repository
@@ -273,6 +280,10 @@ Any media used in this project is either created by the author or used under fai
 Thanks to the developers of the libraries and frameworks used in this project.
 
 Special thanks to Eventbrite for allowing scraping.
+
+### Link to production deployment
+
+Deployment hosted by Heroku - https://project3-event-hoarder-2d3f0c0cde4a.herokuapp.com/
 
 ### More words from developer
 
