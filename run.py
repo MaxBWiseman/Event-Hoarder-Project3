@@ -2072,8 +2072,8 @@ def display_paginated_events(unique_events, search_key, user_selection,
 
         user_input = input('-------------------------------------'
                            '\nPress "Y" to see more events, "T" to quickly go'
-                           ' and view/manipulate this data'
-                           ' "S" go back to main menu, or'
+                           ' and view/manipulate this data\n'
+                           '"S" go back to main menu, or'
                            ' any other key to exit: ').strip().lower()
         if user_input == 's':
             return 'new_search'
