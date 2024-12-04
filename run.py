@@ -184,14 +184,14 @@ def view_data_files():
     View files uploaded to Google Cloud Storage from global list stored_urls.
     """
     if not stored_urls:
-        print('\n-------------------------------------\nNo files uploaded yet.\
-            \n-------------------------------------')
+        print('\n-------------------------------------\n'
+              'No files uploaded yet.'
+              '\n-------------------------------------')
     else:
         for url in stored_urls:
             print(url)
-    input('DO NOT USE CTRL-C TO COPY\nGo back to the main menu? Press Enter to'
-          'continue.')
-    main()
+    input('DO NOT USE CTRL-C TO COPY\nGo back? Press Enter to'
+          ' continue.')
     return
 
 
@@ -291,7 +291,8 @@ def save_to_csv(events):
             writer.writerow(filtered_event)
 
     print(f'\n-------------------------------------\nEvents saved to'
-          f'{file_name}, download/view from the main menu.'
+          f'{file_name}, download/view with option 7,'
+          '\nOr from the main menu with option 5.'
           f'\n-------------------------------------')
     upload_to_gcs(
         'data-visuals-serving', file_name, os.path.basename(file_name))
@@ -504,9 +505,30 @@ def display_events(events, start_index, end_index, user_selection, search_key):
     if user_selection == 'data-manipulation':
         return print('-------------------------------------'
                      '\nEvents displayed in relevance bottom to top.')
-    elif user_selection in ('eventbrite', 'eventbrite_top',
-                            'eventbrite_top_no_category'):
+
+    if user_selection in ('eventbrite', 'eventbrite_top',
+                          'eventbrite_top_no_category'):
         save_to_mongodb(search_key, collected_events)
+
+    if user_selection == 'data-manipulation-done':
+        save_choice = input('-------------------------------------'
+                            '\nWould you like to save the events to a CSV or'
+                            ' Excel file? (C/E)\nOr type anything else'
+                            ' to continue: ').strip().lower()
+        if save_choice == 'c':
+            try:
+                save_to_csv(collected_events)
+                return
+            except ValueError as e:
+                print(f'Error saving events to CSV: {e}')
+        elif save_choice == 'e':
+            try:
+                save_to_excel(collected_events)
+                return
+            except ValueError as e:
+                print(f'Error saving events to Excel: {e}')
+        else:
+            return
 
     # Cache the events in the hashtable
     cache[search_key] = events
@@ -902,14 +924,15 @@ def collection_menu():
     while True:
         print('\n-------------------------------------'
               '\nOn this menu you may view your all your collected events,'
-              '\n view recentley searched events, or clear the database.'
+              '\nview recentley searched events, or clear the database.'
               '\nAfter here when you choose how to view the events,'
-              '\n you may export to CSV (C) and Excel (E) or perform'
-              '\n data tasks with these events (T).'
+              '\nyou may export to CSV (C) and Excel (E) or perform'
+              '\ndata tasks with these events (T).'
               '\n-------------------------------------')
-        print('\nChoose an option to manipulate events or print to CSV:')
-        print('1. View all searched events')
-        print('2. View recent searches')
+        print('\nChoose an option to manipulate events or'
+              ' print to Excel or CSV:')
+        print('1. View all searched events and perform data tasks')
+        print('2. View recently searched events and perform data tasks')
         print('3. Main Menu')
         print('#. Clear Database')
         choice = input('Enter your choice: ').strip()
@@ -1009,8 +1032,8 @@ def compare_events(events):
     while True:
         print('\n-------------------------------------'
               '\nAfter you select an option, your selection will be displayed'
-              ' \nor saved as a visualisation, that can be viewed/downloaded'
-              ' \nfrom a provided link in the main menu with option 5'
+              '\nor saved as a visualisation, that can be viewed/downloaded'
+              '\nwith option 7 below or option 5 on the main menu.'
               '\n-------------------------------------')
         print('\nWhat would you like to compare?')
         print('1. Average price of events')
@@ -1019,7 +1042,8 @@ def compare_events(events):
         print('4. Event count per month')
         print('5. Event price distribution')
         print('6. Event dates over time')
-        print('7. Main Menu')
+        print('7. View links for saved Excel , CSV or data visuals')
+        print('8. Main Menu')
         choice = input('Enter your choice: ').strip()
 
         if choice == '1':
@@ -1247,6 +1271,8 @@ def compare_events(events):
             finally:
                 spinner.stop()
         elif choice == '7':
+            view_data_files()
+        elif choice == '8':
             print('Returning to the main menu.')
             main()
             return
@@ -1348,8 +1374,8 @@ def sort_events(events):
     while True:
         print('\n-------------------------------------'
               '\nAfter you select an option, your selection will be displayed'
-              ' \nor saved as a visualisation, that can be viewed/downloaded'
-              ' \nfrom a provided link in the main menu with option 5'
+              '\nIf you saved the data as Excel or CSV, you can view/download'
+              '\nwith option 6 or option 5 on the main menu.'
               '\n-------------------------------------')
         print('\nWhat would you like to sort?')
         print('1. Free events')
@@ -1357,7 +1383,8 @@ def sort_events(events):
         print('3. Most expensive events')
         print('4. Events happening soon')
         print('5. Closest distance events')
-        print('6. Main Menu')
+        print('6. View links for saved Excel , CSV or data visuals')
+        print('7. Main Menu')
         choice = input('Enter your choice: ').strip()
 
         spinner = Spinner("Sorting events...")
@@ -1372,8 +1399,9 @@ def sort_events(events):
                     'event_price', '').lower() in ['free', 'donation']]
             # Filter in events with event_price of 'free' and 'donation' with
             # list comprehension, if not found, return an empty list
+                spinner.stop()
                 display_events(free_events[::-1], 0, len(free_events),
-                               'data-manipulation', 'None')
+                               'data-manipulation-done', 'None')
             # Display the sorted events from bottom to top
             elif choice == '2':
                 cheap_events = [event for event in events if event.get(
@@ -1391,8 +1419,9 @@ def sort_events(events):
             # list, and extracts the price from the event_price field
             # with help from the extract_price function. The sorted() method
             # will sort the events in ascending order based on extracted price.
+                spinner.stop()
                 display_events(cheap_events_sorted[::-1], 0, len(
-                    cheap_events_sorted), 'data-manipulation', 'None')
+                    cheap_events_sorted), 'data-manipulation-done', 'None')
             # Display the sorted events from bottom to top,
             # ::-1 is used to reverse the list
             elif choice == '3':
@@ -1411,8 +1440,9 @@ def sort_events(events):
             # list, and extracts the price from the event_price field
             # with help from the extract_price function. The sorted() method
             # will sort the events in decending order based on extracted price.
+                spinner.stop()
                 display_events(expensive_events_sorted[::-1], 0, len(
-                    expensive_events_sorted), 'data-manipulation', 'None')
+                    expensive_events_sorted), 'data-manipulation-done', 'None')
             # Display the sorted events from bottom to top ,
             # ::-1 is used to reverse the list
             elif choice == '4':
@@ -1438,31 +1468,42 @@ def sort_events(events):
                         # on the event_date_time
                     else:
                         continue
+                spinner.stop()
                 display_events(soonest_events[::-1], 0, len(soonest_events),
-                               'data-manipulation', 'None')
+                               'data-manipulation-done', 'None')
             elif choice == '5':
                 spinner.stop()
-                user_location = input(
-                    'Enter your postcode or specific location: ')
+                user_location = input('Enter your postcode or'
+                                      ' specific location: ')
                 spinner = Spinner("Sorting events...")
                 spinner.start()
-                api_key = os.getenv('GOOGLE_MAPS_API_KEY')
-                closest_events = find_closest_events(user_location,
-                                                     events, api_key)
-                # This is calculated using the geopy library's geodesic
-                # function, which calculates the distance between two points
-                # on the Earth's surface using the geodesic distance,
-                # which is more accurate than the haversine formula
-                if closest_events:
-                    display_events(closest_events, 0, len(closest_events),
-                                   'data-manipulation', 'None')
-                else:
-                    print('\n-------------------------------------'
-                          '\nNo events found or location cannot be geocoded.'
-                          '\n-------------------------------------')
+                try:
+                    api_key = os.getenv('GOOGLE_MAPS_API_KEY')
+                    closest_events = find_closest_events(user_location,
+                                                         events, api_key)
+                    # This is calculated using the geopy library's geodesic
+                    # function, which calculates the distance between two
+                    # points on the Earth's surface using the geodesic
+                    # distance, which is more accurate than the
+                    # haversine formula
+                    if closest_events:
+                        spinner.stop()
+                        display_events(closest_events, 0, len(closest_events),
+                                       'data-manipulation-done', 'None')
+                    else:
+                        print('\n-------------------------------------'
+                              '\nNo events found or location'
+                              ' cannot be geocoded.'
+                              '\n-------------------------------------')
+                        continue
+                except ValueError as e:
+                    print(f'Error sorting events: {e}')
                     continue
                 del user_location  # Ensure the user_location is deleted
             elif choice == '6':
+                spinner.stop()
+                view_data_files()
+            elif choice == '7':
                 spinner.stop()
                 print('\n-------------------------------------'
                       '\nReturning to the main menu.'
@@ -1470,13 +1511,14 @@ def sort_events(events):
                 main()
                 return
             else:
+                spinner.stop()
                 print('\n-------------------------------------'
                       '\nInvalid choice. Please try again.'
                       '\n-------------------------------------')
-                spinner.stop()
                 continue
-        finally:
-            spinner.stop()
+        except ValueError as e:
+            print(f'Error sorting events: {e}')
+            return
 
 
 def event_manipulation_menu(events):
@@ -2073,8 +2115,7 @@ def display_paginated_events(unique_events, search_key, user_selection,
         user_input = input('-------------------------------------'
                            '\nPress "Y" to see more events, "T" to quickly go'
                            ' and view/manipulate this data\n'
-                           '"S" go back to main menu, or'
-                           ' any other key to exit: ').strip().lower()
+                           '"S" go back to main menu: ').strip().lower()
         if user_input == 's':
             return 'new_search'
         elif user_input == 't':
@@ -2082,8 +2123,10 @@ def display_paginated_events(unique_events, search_key, user_selection,
         elif user_input == 'y':
             current_page += 1
         else:
-            print("Exiting the program.")
-            sys.exit()
+            print('\n-------------------------------------'
+                  '\nInvalid choice. Please try again.'
+                  '\n-------------------------------------')
+            continue
 
     return 'done'
 
